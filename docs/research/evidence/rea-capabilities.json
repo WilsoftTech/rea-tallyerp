@@ -1,0 +1,80 @@
+{
+  "observedOn": "2026-10-25",
+  "method": "mcp__rea__binary_session({})",
+  "open": false,
+  "cleanup_pending": false,
+  "serverVersion": "6.8.0",
+  "scope": "Selected availability fields only; this is not a complete session export.",
+  "groups": [
+    {
+      "names": [
+        "capture_native_ui_scenario"
+      ],
+      "surface": "native-provider",
+      "effects": [
+        "mutatesTarget",
+        "mutatesSession",
+        "writesFilesystem",
+        "launchesProcess",
+        "accessesNetwork",
+        "changesUiState",
+        "mayDiscardData",
+        "executesForeignCode"
+      ],
+      "annotations": [
+        "destructive",
+        "open_world"
+      ],
+      "available": false,
+      "reason": "unsupported_host",
+      "remediation": "Native macOS utilities require macOS."
+    },
+    {
+      "names": [
+        "frida_session_status",
+        "inspect_apple_ips",
+        "inspect_byte_entropy",
+        "inspect_devicetree",
+        "inspect_elf_notes",
+        "inspect_kernel_module",
+        "inspect_native_exports",
+        "inspect_pe_certificates",
+        "inspect_pe_imports",
+        "inspect_pe_load_config",
+        "inspect_pe_resources",
+        "rizin_debug_session_status"
+      ],
+      "surface": "native-provider",
+      "effects": [
+        "mutatesSession",
+        "idempotent"
+      ],
+      "annotations": [
+        "idempotent"
+      ],
+      "available": true,
+      "reason": "available",
+      "remediation": null
+    },
+    {
+      "names": [
+        "inspect_signature",
+        "observe_native_ui"
+      ],
+      "surface": "native-provider",
+      "effects": [
+        "mutatesSession",
+        "writesFilesystem",
+        "launchesProcess",
+        "idempotent"
+      ],
+      "annotations": [
+        "idempotent",
+        "open_world"
+      ],
+      "available": false,
+      "reason": "unsupported_host",
+      "remediation": "Native macOS utilities require macOS."
+    }
+  ]
+}

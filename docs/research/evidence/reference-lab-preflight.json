@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "preparedOn": "2026-10-25",
+  "state": "BASELINE_COMPLETE_OPERATOR_REPORTED_AWAITING_APPROVAL",
+  "ownerInput": "No existing separate synthetic Tally environment; owner supplied C:/Tally.ERP9/tally.exe, verified as the installed application rather than an installer.",
+  "workspaceRelativePath": "local-data/reference-lab",
+  "gitIgnored": true,
+  "directories": ["app", "data", "config", "exports", "observations"],
+  "preparedFiles": [
+    "manifest.json",
+    "scenario.json",
+    "config/tally.ini.draft",
+    "config/tally.ini",
+    "observations/baseline.json"
+  ],
+  "applicationEntryCountAtPreflight": 0,
+  "dataEntryCountAtPreflight": 0,
+  "runtimeInstalled": false,
+  "runtimeLaunched": true,
+  "runtimeIsolationVerified": false,
+  "runtimeMode": "reuse-installed-executable",
+  "guardedLauncher": "tools/reference-lab.mjs",
+  "launcherCheck": {
+    "status": "READY_FOR_CONTROLLED_LAUNCH",
+    "exitCode": 0,
+    "launchRequested": true,
+    "processesBeforeLaunch": [],
+    "priorBlocker": "Owner reported saving/closing sessions normally; recheck found no matching tally processes.",
+    "limitations": "Process readiness does not establish selected configuration, company isolation, or successful accounting workflows."
+  },
+  "launchObservation": {
+    "initialAttempt": {
+      "processId": 12712,
+      "spawnObserved": true,
+      "presentAtFollowup": false,
+      "exitCode": null,
+      "cause": "Unknown; launcher session lifecycle was a possible cause, not a verified diagnosis."
+    },
+    "retainedSessionAttempt": {
+      "processId": 25336,
+      "toolSessionId": 57965,
+      "processPresent": true,
+      "mainWindowHandle": 6490736,
+      "responding": true,
+      "exitCode": null,
+      "workingDirectory": "local-data/reference-lab/config",
+      "arguments": ["/NOINILOAD", "/NOINITDL"],
+      "operatorPathCheck": "CONFIRMED_BY_OWNER",
+      "limitations": "Window handle/responding flag do not establish what is displayed. No company or active-path content inspected."
+    }
+  },
+  "workingDirectoryDocumentation": "https://help.tallysolutions.com/docs/td9rel54/td9/tally_developer_tools/preference.htm",
+  "observationStatus": "COMPLETE_OPERATOR_REPORTED_WITH_LIMITATIONS",
+  "operatorObservation": {
+    "reportedOn": "2026-10-25",
+    "source": "Owner response to bundled data/config/export and empty-company check",
+    "verbatimResponse": "All three paths match, and no company is loaded",
+    "expectedDataPath": "local-data/reference-lab/data",
+    "expectedConfigurationPath": "local-data/reference-lab/config",
+    "expectedExportPath": "local-data/reference-lab/exports",
+    "sourceScope": "Only the displayed paths and initial empty-company state; no company creation or period behavior reported",
+    "independentlyObservedByAgent": false
+  },
+  "completedBaseline": {
+    "recordId": "OP-P1-BASELINE-2026-10-25",
+    "source": "Owner's explicit manual-test completion report in chat",
+    "companyName": "Synthetic Reference Lab",
+    "companyCreation": "Successful",
+    "creationUsingDefaults": "Successful; no additional restrictions/errors reported; individual setting values not enumerated",
+    "financialYearStartSetTo": "2026-01-01",
+    "booksBeginningSetTo": "2026-01-01",
+    "openingBalancesEntered": false,
+    "acceptedPeriod": {"start": "2026-02-01", "end": "2026-02-28"},
+    "invalidRange": {
+      "condition": "End precedes start",
+      "start": "2026-02-28",
+      "end": "2026-02-01",
+      "reportedStart": "28-02-2026",
+      "reportedEnd": "01-02-2026",
+      "proceedingPrevented": true,
+      "feedback": "Audible warning only",
+      "visibleErrorMessage": false
+    },
+    "validPeriodRestoration": "Successful; restored values not separately reported",
+    "companyShutdownAndReselection": "Successful",
+    "otherTestedOperations": "No reported errors; no unspecified behavior inferred",
+    "defaults": null,
+    "financialYearDateAfterReselection": null,
+    "booksBeginningAfterReselection": null,
+    "periodAfterReselection": null,
+    "independentlyObservedByAgent": false,
+    "criterionP1_10": "PASS — baseline navigation and actions/results only"
+  },
+  "referenceExecutableSha256Rechecked": "be0ba3120ae514d485a059d5cf07018dd8a67ebcd289dd6e66bd113db6581c54",
+  "reaConnectivityRechecked": {
+    "operation": "binary_session",
+    "serverVersion": "6.8.0",
+    "open": false,
+    "cleanupPending": false,
+    "nativeUiAvailability": "unsupported_host"
+  },
+  "installerSearch": {
+    "scope": "Explicit install.exe, install64.exe and setup.exe paths under C:/Tally.ERP9, D:/Tally.ERP9 and D:/Tally.ERP9 2 only",
+    "matchingFiles": 0,
+    "exhaustive": false
+  },
+  "phase1TechnicalBlockers": [],
+  "approvalStatus": "AWAITING USER APPROVAL — NEXT PHASE BLOCKED",
+  "limitations": [
+    "Prepared folders and draft configuration do not establish a working or isolated runtime",
+    "Displayed lab paths confirmed by owner; no independent filesystem/network isolation audit",
+    "Creation using defaults is owner-reported; individual setting values and post-reselection dates/period remain unverified",
+    "Manual observations are owner-reported, not captured through REA or an agent UI tool",
+    "No agent copy/edit command targeted production configuration, company data, licences or vendor binaries; target file accesses were not audited",
+    "No installation, licensing change or agent-initiated production company action performed; target file access was not independently traced"
+  ]
+}
