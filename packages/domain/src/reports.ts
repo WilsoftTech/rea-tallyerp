@@ -1,21 +1,33 @@
 import { businessDate, dateRange } from './calendar.js';
 import type { DateRange } from './calendar.js';
-import { ensure, freeze } from './errors.js';
-import { validateJournalInput } from './journal.js';
+import { ensure, freeze, identifier } from './errors.js';
+import { timestamp, validateJournalInput } from './journal.js';
 import type { JournalEntry } from './journal.js';
 import type { BookConfig } from './model.js';
 import { sameScope } from './model.js';
 
 function ordered(book: BookConfig, entries: readonly JournalEntry[]): JournalEntry[] {
   const ids = new Set<string>();
+  const originals = new Map(entries.map((entry) => [entry.id, entry]));
+  const reversed = new Set<string>();
   for (const entry of entries) {
     sameScope(book.company, entry);
+    identifier(entry.actorId, 'actorId'); timestamp(entry.createdAt);
     ensure(!ids.has(entry.id), 'DUPLICATE_JOURNAL', 'Report input contains duplicate journal IDs.'); ids.add(entry.id);
     const period = book.periods.find((row) => row.id === entry.periodId);
     ensure(period?.yearId === entry.yearId, 'ENTRY_PERIOD_MISMATCH', 'Journal financial year must match its referenced period.');
     ensure(entry.currency.code === book.company.currency.code && entry.currency.scale === book.company.currency.scale, 'CURRENCY_MISMATCH', 'Report currency must match the book.');
     const lines = validateJournalInput(book, { ...entry, expectedPeriodVersion: entry.periodVersion }, false);
     ensure(lines.every((line, index) => line.nature === entry.lines[index]?.nature), 'NATURE_MISMATCH', 'Historical classification differs from the chart.');
+    if (entry.reverses !== null) {
+      const original = originals.get(entry.reverses);
+      ensure(original && original.reverses === null && original.id !== entry.id && !reversed.has(original.id) &&
+        entry.date >= original.date && entry.intent === 'general' && entry.narration.trim().length > 0 &&
+        original.lines.length === entry.lines.length && original.lines.every((line, i) => {
+          const other = entry.lines[i]; return other && line.ledgerId === other.ledgerId && line.amount === other.amount && line.side !== other.side;
+        }), 'INVALID_REVERSAL', 'Historical reversal must exactly offset one existing original without changing it.');
+      reversed.add(original.id);
+    }
   }
   return [...entries].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 }

@@ -1,11 +1,15 @@
-import type { AccountGroup, BookConfig, DraftVoucher, FinancialPeriod, JournalEntry, JournalInput, Ledger, Scope } from '@erp/domain';
+import type { AccountGroup, BookConfig, DraftVoucher, FinancialPeriod, FinancialYear, JournalEntry, JournalInput, Ledger, Scope } from '@erp/domain';
 
 export type Permission = 'read' | 'post' | 'reverse' | 'draft' | 'manage-chart' | 'manage-periods' | 'reopen-period';
 /** Supplied by a trusted host authorization boundary; this package is not authentication. */
 export interface Principal extends Scope { readonly actorId: string; readonly permissions: readonly Permission[] }
 export interface AuditEvent extends Scope { readonly commandId: string; readonly actorId: string; readonly action: string; readonly at: string; readonly reason: string }
 export type CommandResult = JournalEntry | DraftVoucher | FinancialPeriod | BookConfig;
-export interface CommandReceipt extends Scope { readonly commandId: string; readonly payload: string; readonly result: CommandResult }
+export interface CommandReceipt extends Scope {
+  readonly commandId: string; readonly payload: string; readonly result: CommandResult;
+  /** Typed original command retained for versioned outbox delivery; absent only on legacy receipts. */
+  readonly command?: FinancialCommand;
+}
 export interface BookState {
   config: BookConfig;
   chartVersion: number;
@@ -44,4 +48,8 @@ export interface ChartCommand {
   readonly kind: 'replace-chart'; readonly commandId: string; readonly groups: readonly AccountGroup[]; readonly ledgers: readonly Ledger[];
   readonly expectedChartVersion: number;
 }
-export type FinancialCommand = PostCommand | ReverseCommand | SaveDraftCommand | PostDraftCommand | LockCommand | ChartCommand;
+export interface CalendarCommand {
+  readonly kind: 'extend-calendar'; readonly commandId: string; readonly expectedChartVersion: number;
+  readonly year: FinancialYear; readonly period: FinancialPeriod; readonly reason: string;
+}
+export type FinancialCommand = PostCommand | ReverseCommand | SaveDraftCommand | PostDraftCommand | LockCommand | ChartCommand | CalendarCommand;

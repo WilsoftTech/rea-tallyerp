@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "paths": {
+      "@erp/contracts/codec": ["../../packages/contracts/src/codec.ts"],
+      "@erp/domain": ["../../packages/domain/src/index.ts"],
+      "@erp/application": ["../../packages/application/src/index.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

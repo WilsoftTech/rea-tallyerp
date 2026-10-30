@@ -1,71 +1,75 @@
 # Architecture overview
 
-Status: Phase 1 approved/closed; Phase 2 domain/application engine implemented and awaiting closure approval. `packages/domain` contains pure TypeScript rules/projections; `packages/application` contains authorization orchestration, transactional contracts and an explicitly in-memory reference adapter. Tests/build/type/lint and emitted-package integration pass. No native/web UI, database, sync service or authentication exists. The wider topology below remains proposed. See [research provenance](../research/tally-workflows.md).
+Status: Phases 1–4 approved/closed. Phase 5 browser implementation is undergoing verification; [phase status](../progress/phase-status.md) records actual checks and approvals. Invoicing, inventory and release deployment have not begun.
 
-## Product boundaries
-
-Build an original offline accounting product with Windows desktop and browser clients, a shared accounting model, optional secure cloud synchronization, multiple companies/years and eventual SaaS deployment. Desktop must post without internet or a Node server. Browser offline use requires an initial successful installation/load and compatible persistent storage; it cannot promise desktop-level durability.
-
-Tenant identifies the customer organization; companies hold separate books. A local-only organization exists without a cloud account. Its future cloud enrollment is an explicit reconciliation/import process, not an automatic change of authority. Initially support one base currency per company; future FX posting requires separately approved valuation/rounding rules.
-
-## Proposed topology
+## Implemented topology
 
 ```mermaid
 flowchart TD
-  W[Next.js browser client] --> U[Shared React UI and application use cases]
-  D[React Tauri desktop client] --> U
-  U --> C[Pure TypeScript accounting domain]
-  U --> P[Persistence and authorization ports]
-  P --> I[IndexedDB adapter]
-  P --> T[Restricted native transaction bridge]
-  T --> S[SQLite local store]
-  I --> O[Transactional outbox and sync coordinator]
-  S --> O
-  O --> A[Authenticated Node API]
-  A --> C
-  A --> G[Prisma PostgreSQL adapter]
+  UI[Shared original React workspace] --> APP[Shared TypeScript accounting application]
+  WEB[Next.js public client shell] --> UI
+  WEB --> IDB[IndexedDB source book, outbox and cloud mirror]
+  WEB --> PROXY[Fixed-origin accounting proxy]
+  PROXY --> API
+  SW[Public-shell-only service worker] --> WEB
+  APP --> DOMAIN[Pure TypeScript accounting domain]
+  APP --> CAS[Desktop BookStore with revision CAS]
+  CAS --> NATIVE[Restricted Tauri Rust boundary]
+  NATIVE --> SQLITE[SQLite source history and durable outbox]
+  NATIVE --> HTTP[Native HTTPS coordinator]
+  HTTP --> API[Authenticated Node API]
+  API --> APP
+  API --> PRISMA[Prisma transaction and PostgreSQL adapter]
+  PRISMA --> PG[PostgreSQL with forced scoped RLS and constraints]
+  HTTP --> MIRROR[Separate canonical mirror and cursor in SQLite]
+  MIRROR --> REPORT[Shared domain report projection]
+  SQLITE --> REPORT
 ```
 
-The diagram describes planned responsibilities, not deployed services. One modular cloud backend is sufficient; no microservices, Redis, queue broker or always-running desktop background service is justified yet.
+Vite embeds static React assets in Tauri. The installed desktop contains no Node server. The separate Node service uses native HTTP/HTTPS, crypto and bounded Zod contracts; no web framework, queue service, Redis or microservices were added.
 
-## Workspace plan
+## Workspace responsibilities
 
-`packages/domain` and `packages/application` now exist as npm workspaces; all other paths below are future-phase plans. Root scripts run real Vitest/type/lint/build/repository checks. Domain has no external runtime dependencies; application depends only on the domain workspace and uses the standard structuredClone API (DOM typings for the shared API, not a browser framework). No UI/native/cloud stack installed.
+| Path | Implemented responsibility |
+| --- | --- |
+| `packages/domain` | Exact bigint money, real dates, scoped chart, journal/reversal rules and reports; no framework, database or I/O dependencies |
+| `packages/application` | Trusted-principal authorization, versioned/idempotent commands, unit-of-work ports and shared immutable commit guards |
+| `packages/contracts` | Protocol-1 schemas, role permissions and strict external snapshot validation; a separate small codec/report projection avoids bundling Zod into the desktop |
+| `packages/workspace` | Existing React forms/styles/error controls, host contract, shared CAS BookStore and report projection; injected host I/O, no database/runtime dependency |
+| `apps/desktop` | Tauri host, local password vault, SQLite transactions, encrypted backups, native-only cloud sessions and sync |
+| `apps/web` | Next.js static public shell, fixed-origin API proxy, native IndexedDB/Web Crypto/Cache APIs, browser sessions/grants, sync and external backups |
+| `apps/api` | Scrypt authentication, company membership checks, Prisma/PostgreSQL transactional posting, security administration, grants and change feed |
+| `tools` | Scoped development database, native build/test helpers, WebView2 tests, audits and recovery-epoch operation |
 
-| Planned path | Earliest phase | Responsibility / forbidden coupling |
+Existing Field/Panel/forms/styles and the CAS adapter were extracted into the populated workspace package; desktop and browser use the same implementation. Vite/domain/application validation and tests were reused. No state-management, IndexedDB wrapper, PWA framework or extra cryptography dependency was introduced. Next.js is the sole new runtime framework in Phase 5.
+
+## Authority and transactions
+
+A local tenant/vault is independent of a cloud organization. Explicit owner-reviewed enrollment imports a fixed historical snapshot; joining creates a separate local source book with cloud masters and a canonical mirror. Local journal scope, actor, timestamps, receipts and audit never change to impersonate server records.
+
+The renderer runs shared accounting use cases, but native storage checks scope, immutable transitions, current offline permissions and typed command/result consistency before a SQLite commit. New financial receipts, audit, journal and outbox are atomic. Revision CAS handles competing windows/processes.
+
+The service derives identity from an opaque session, authorizes current membership/company access, locks the company, reruns the same accounting service and atomically writes its outcome, accepted journal/audit and company change cursor. Posted transactions use no last-write-wins merge. The runtime database role cannot own tables or bypass RLS; transaction-local context is reset under pooling.
+
+Native synchronization plans durable work under short locks, releases the vault/file/SQLite locks for HTTPS, then revalidates identity/generation and applies acknowledgments or a canonical snapshot atomically. Shared master changes are online-only after enrollment. Operational reports combine the accepted cloud mirror with this device's eligible pending entries, deduplicating IDs; canonical-only and original-device views remain explicit.
+
+## Limits and later work
+
+Carried-forward targets remain provisional, not waived by this phase's small synthetic samples:
+
+| Concern | Target on an agreed representative device/dataset | Later proof |
 | --- | --- | --- |
-| `packages/domain` | 2 | Exact money and accounting rules; no React/SQL/Prisma/Zod/runtime I/O imports |
-| `packages/application` | 2 | Commands, authorization policy orchestration, unit-of-work ports; depends on domain, not concrete storage |
-| `packages/contracts` | 4 if needed | Versioned external command/ack/change schemas and serialization; domain errors mapped at boundary |
-| `apps/desktop` | 3 | React host, Rust native IPC/SQLite adapter, window lifecycle; no unrestricted renderer SQL/filesystem |
-| `packages/ui` | 3, extracted as reuse warrants | Original reusable forms, navigation, status and keyboard behavior; no accounting arithmetic |
-| `apps/api` | 4 | Node authentication, server command execution, PostgreSQL adapter, incremental feed; Prisma stays server-side |
-| `apps/web` | 5 | Next.js hosting/client routes, IndexedDB adapter, service worker; no DB credentials or offline reliance on server actions |
+| Desktop start | Usable local company within 3 seconds on SSD/4 GB RAM | Phase 3/4 baseline; Phase 9 release dataset |
+| Local posting | p95 under 200 ms for 20 lines, excluding user input | Phase 3 baseline; Phase 9 scale |
+| Trial balance | Under 2 seconds for 100,000 posted lines | Phase 9 representative dataset |
+| Idle memory | Under 200 MiB including descendant WebView processes | Phase 3/4 samples; Phase 9 refinement |
+| Accessibility | Complete keyboard entry, focus/labels/error recovery; WCAG 2.2 AA target | Current automated associations; later broader audit |
+| Accounting | No unbalanced, duplicate or silently mutated postings; reproducible totals | Continuous engine/adapter/sync checks |
 
-Adapter code stays with its host until reuse justifies a separate package. Avoid empty packages, universal repositories and one-to-one wrappers around native APIs. npm workspaces orchestrate actual packages; reconsider Turborepo only after measured task/build bottlenecks.
+Current snapshots/validation copy whole small-company books: 16 MiB financial/request limits, an 18 MiB native response cap and 128 MiB local backup limit bound memory. Change cursors are incremental, while each returned batch contains one complete as-of snapshot. Large-book storage/feed redesign requires measurements in Phase 9.
 
-## Runtime and transaction boundaries
+Native cloud transport requires HTTPS except loopback development, blocks redirects and has bounded timeouts. Sign-out/lock clears native bearer memory; signed public offline grants last at most 24 hours. Windows account/disk protection remains necessary because SQLite is unencrypted. OS administrators can modify executables/files or clocks; immediate disconnected revocation cannot be guaranteed.
 
-The same TS domain validates commands on desktop, browser and server. Application code reads a consistent company/period snapshot, validates it, and commits through an adapter that checks expected versions and permissions again within the transaction. A validation result is not a durable posting acknowledgment.
+The Next.js `/` route prerenders only a public loading shell; financial data and passwords never enter server rendering, RSC props or public caches. React opens the origin's local vault after hydration. The service worker precaches only `/`, manifest/icon and build-hashed static assets. Offline reopening requires an initial successful install. Normal worker waiting keeps old clients on their existing shell until every workspace tab closes; database version changes close stale connections and require reload. No automatic financial reset, forced worker takeover or background posting service exists.
 
-Tauri needs native Rust for narrow OS/SQLite operations; TypeScript alone cannot be its privileged host. The renderer is untrusted. A bounded native command accepts a typed posting plan, validates shape/scope, and atomically persists the plan, receipt, audit event and outbox. SQL/native enforcement of balance, references, locks and immutability is defense in depth, not a second implementation of pricing/tax/valuation algorithms. Browser checks protect consistency but cannot defeat a user controlling their browser. The server always reruns shared domain validation with current authorization and trusted state.
-
-Next.js server rendering, server actions and route handlers are not desktop runtime dependencies. Tauri's Next.js guidance requires static exports; the proposed desktop uses a small standalone React bundle instead. Shared components must avoid Next-specific APIs. This choice trades one small host build for no embedded Node server. [Tauri Next.js guidance](https://v2.tauri.app/start/frontend/nextjs/)
-
-## Nonfunctional targets for review
-
-These are provisional targets, not measurements or release guarantees. Select representative low-end Windows hardware, dataset and browser matrix before implementing benchmarks.
-
-| Concern | Proposed acceptance target | Measurement phase |
-| --- | --- | --- |
-| Desktop start | Usable local company within 3 seconds on agreed SSD device, 4 GB RAM | 3 baseline; 9 release dataset |
-| Local posting | p95 under 200 ms for 20 lines excluding user input, with durable acknowledgment | 3 and 9 |
-| Trial balance | Under 2 seconds for 100,000 posted lines on agreed device | 3 and 9 |
-| Idle memory | Desktop under 200 MiB private working set including its WebView processes | 3 baseline; 9 refinement |
-| Accessibility | Keyboard-complete core entry, visible focus, meaningful labels and predictable error recovery; target WCAG 2.2 AA | 3 onward |
-| Financial correctness | No unbalanced, duplicated or silently mutated posted journals; totals reproducible from source entries | 2 onward |
-| Recovery | Zero acknowledged-local-post loss in tested process-crash scenarios; hardware durability bounded by OS/device behavior | 3 onward |
-
-RPO/RTO, cloud region and availability objectives require owner approval; see [risk register](decisions.md). Browser quota and eviction remain user-agent policies even when persistence is requested. [MDN storage limits](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria)
-
-Dependency admission and security boundaries are specified in [decisions](decisions.md) and [security](security.md). Planned testing is in [test strategy](../testing/test-strategy.md). None of these requirements has yet been validated by an application build.
+IndexedDB write acknowledgment follows transaction completion, requesting strict durability where supported; browser/OS eviction and physical-disk guarantees differ from native SQLite. Browser credentials, backup KDF and threat limits are documented in [security](security.md). Packaging/signing, clean-machine installation, production hosting, realistic scale, RPO/RTO and comprehensive adversarial assurance remain Phases 9–10, separately approved. Current synthetic resource samples describe this host only.

@@ -1,0 +1,19 @@
+{
+  "name": "@erp/workspace",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./ui": "./src/ui.tsx",
+    "./host": "./src/host.ts",
+    "./store": "./src/store.ts",
+    "./cloud": "./src/cloud.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "dependencies": {
+    "@erp/domain": "0.0.0",
+    "@erp/application": "0.0.0",
+    "@erp/contracts": "0.0.0",
+    "react": "19.3.1"
+  }
+}

@@ -1,7 +1,7 @@
 import { AccountingError, businessDate, contains, defineBook, ensure, freeze, identifier,
   postJournal, reverseJournal, sameScope, timestamp, validateLines, version } from '@erp/domain';
 import type { BookConfig, DraftVoucher, FinancialPeriod, JournalEntry } from '@erp/domain';
-import type { BookState, BookStore, ChartCommand, CommandResult, FinancialCommand, LockCommand,
+import type { BookState, BookStore, CalendarCommand, ChartCommand, CommandResult, FinancialCommand, LockCommand,
   Permission, PostCommand, PostDraftCommand, Principal, ReverseCommand, SaveDraftCommand } from './contracts.js';
 import { canonical } from './data.js';
 
@@ -38,9 +38,9 @@ export class AccountingService {
       }
       const at = timestamp(this.clock());
       const result = apply(book, command, actor, at);
-      book.receipts.push(freeze({ tenantId: actor.tenantId, companyId: actor.companyId, commandId: command.commandId, payload, result }));
+      book.receipts.push(freeze({ tenantId: actor.tenantId, companyId: actor.companyId, commandId: command.commandId, payload, result, command }));
       book.audit.push(freeze({ tenantId: actor.tenantId, companyId: actor.companyId, commandId: command.commandId, actorId: actor.actorId, action: command.kind, at,
-        reason: command.kind === 'period-status' ? command.reason : command.kind === 'reverse' ? command.journal.narration : '' }));
+        reason: command.kind === 'period-status' || command.kind === 'extend-calendar' ? command.reason : command.kind === 'reverse' ? command.journal.narration : '' }));
       return result;
     });
   }
@@ -129,6 +129,18 @@ export class AccountingService {
       book.config = next;
       if (changed) book.chartVersion = version(book.chartVersion + 1);
       return next;
+    });
+  }
+
+  /** Append a financial year and its initial period; existing calendars/history stay intact. */
+  extendCalendar(principal: Principal, command: CalendarCommand): Promise<BookConfig> {
+    return this.execute(principal, 'manage-periods', command, (book, captured) => {
+      ensure(captured.kind === 'extend-calendar', 'INVALID_COMMAND', 'Expected calendar extension command.');
+      ensure(typeof captured.reason === 'string' && captured.reason.trim().length > 0 && captured.reason.length <= 2000, 'REASON_REQUIRED', 'Adding a financial year requires a bounded audit reason.');
+      ensure(captured.period.yearId === captured.year.id && captured.period.status === 'open' && captured.period.version === 1,
+        'INVALID_PERIOD', 'New financial year requires its own open initial period at version one.');
+      book.config = defineBook({ ...book.config, years: [...book.config.years, captured.year], periods: [...book.config.periods, captured.period] });
+      return book.config;
     });
   }
 

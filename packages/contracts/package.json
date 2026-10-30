@@ -1,0 +1,19 @@
+{
+  "name": "@erp/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./reconcile": { "types": "./dist/reconcile.d.ts", "default": "./dist/reconcile.js" },
+    "./codec": { "types": "./dist/codec.d.ts", "default": "./dist/codec.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@erp/application": "0.0.0",
+    "@erp/domain": "0.0.0",
+    "zod": "4.6.7"
+  }
+}

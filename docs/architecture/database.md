@@ -1,61 +1,74 @@
-# Database design
+# Database implementation
 
-Status: Phase 2 logical contracts and InMemoryBookStore reference/test adapter are implemented. No physical schema, Prisma model, migrations, SQLite/IndexedDB/PostgreSQL adapter or production database exists. The memory adapter loses state at exit; its transaction tests do not establish disk durability. Physical schemas below remain proposals and must implement the same shared rules.
+Status: SQLite v2, PostgreSQL migrations 001–004 and the Phase 5 IndexedDB adapter exist. Current verification/approval is in [phase status](../progress/phase-status.md); final Phase 5 gates remain in progress.
 
-Current state lives in a scoped BookState: validated company/year/period/chart configuration, chart revision, immutable journal snapshots, draft/source versions, exact canonical command receipts and append-only audit events. Registration and every memory commit validate period ranges; posting/locks serialize per tenant/company. Copies prevent callers from mutating live state. Publication guards reject journal/receipt/audit deletion or edits and require each new journal's receipt/audit. No outbox is implemented yet. Period versions and referenced chart restrictions are enforced; real DB constraints/RLS/crash recovery await their phases. Ledger/trial-balance projections rebuild from entries, using wider bigint sums.
+## Local SQLite
 
-## Scope and logical entities
+[001.sql](../../apps/desktop/src-tauri/migrations/001.sql) establishes the local owner vault, scoped book/revision snapshots, periods, ledgers, finalized journals/lines, immutable receipts/audit and outbox. [002_sync.sql](../../apps/desktop/src-tauri/migrations/002_sync.sql) preserves v1 receipt order/payloads while adding typed commands, delivery states/leases/backoff, cloud profiles, metadata intents, enrollment/join intents, append-only sync events and resolution links.
 
-Tenant is the organization boundary; company is the accounting boundary. Tenant-level rows have tenant scope; company rows require both tenant and company. Financial year is an interval, not a separate copied ledger database. Do not duplicate a tenant row for every company/year.
+Amounts bind exactly as SQLite signed-64 integers; native aggregate validation uses i128, shared reports bigint. Every connection reads back WAL, synchronous=FULL, foreign_keys=ON and a five-second busy timeout. BEGIN IMMEDIATE plus revision CAS serializes source commits across windows/processes. Posting, receipt, audit and outbox commit together.
 
-| Planned entity | Key relationships and constraints | Phase |
-| --- | --- | --- |
-| Tenant, Company | Company belongs to tenant; base currency/exponent versioned and fixed after posting unless an explicit migration is approved | 2 contracts; 3 persistence |
-| FinancialYear, FinancialPeriod | Company-scoped non-overlapping intervals; business dates, books-from date, open/locked status, version; year/period membership consistent | 2 |
-| AccountGroup, Ledger | Company-scoped; group hierarchy acyclic; account nature Asset/Liability/Equity/Income/Expense; no deletion/reclassification of referenced historical accounting meaning | 2 |
-| DraftVoucher | Mutable validated source document with version; posting creates immutable journal snapshot | 2 |
-| JournalEntry, JournalLine | Company/year/period-scoped; balanced base-currency amount lines referencing same-company ledgers; immutable header and lines | 2 |
-| CommandReceipt | Unique tenant/company/command ID, canonical payload digest, immutable outcome and result references; transactionally stored | 2 contracts; 3 local; 4 server |
-| AuditEvent | Actor/device/scope, action, immutable resource reference, reason, timestamp and correlation; append-only | 2 contracts; 3 local; 4 server |
-| OutboxCommand | Versioned payload, command/device IDs, expected versions, retry metadata; unique scope/command; references immutable local posting | 3 |
-| User, Membership, RoleGrant, Device | Identity and scoped permission membership; offline grant separate from cloud session | 3 local; 4 cloud |
-| SyncState, ServerChange | Company cursor/generation, schema version and canonical change sequence; atomic apply/cursor update | 4 |
-| Party, Invoice, PaymentAllocation | Company-scoped customer/supplier and document links, exact allocations/control ledgers | 6 |
-| Product, Warehouse, StockMovement, Valuation | Exact quantities and costs; append-only movements and journal links | 7 |
-| TaxRuleVersion | Company/jurisdiction effective dates and source references; snapshot applied rules on documents | 8 |
+Source journal/receipt/audit projections remain immutable. Canonical cloud snapshots are separate JSON records: applying a snapshot updates only compatible local masters plus the mirror, outcomes and cursor. Shared-master responses do not fabricate local-owner financial audit events. Source books can omit other devices' journals; operational reporting uses the separate projection described in [sync](offline-sync.md).
 
-Surrogate identifiers are opaque collision-resistant values created by platform cryptographic APIs; display numbers are separate. A provisional device-scoped number is never relabeled as a statutory final number without an explicit accepted mapping.
+Migrations are transactional, rechecked under the writer lock and reject newer schemas. Startup validates exact schema, SQLite integrity/FKs and source projection reconciliation. A Windows file lock protects short native operations and restore across processes; HTTPS never runs under that lock. Full-copy book validation, 16 MiB source/request limits, a 17 MiB encoded IPC cap, 18 MiB native response cap and 128 MiB backup cap bound this version; large-book performance is unproven.
 
-## Money, quantities and dates
+## PostgreSQL
 
-Proposed domain representation: integer minor units (`bigint`) plus currency/exponent, bounded to signed 64-bit storage with explicit aggregate overflow checks. Journal line amounts are strictly positive with a debit/credit side; zero lines and mixed/negative signs are rejected. Canonical JSON encodes integer values as base-10 strings, never JS numbers. Validate canonical forms and limits at all boundaries.
+The Node service uses Prisma 7's PostgreSQL adapter and parameterized raw SQL inside Prisma transactions. [Prisma schema](../../apps/api/prisma/schema.prisma) supplies the generated client; authoritative physical constraints/policies are the forward SQL migration files under `apps/api/prisma/migrations`. No Prisma-generated schema diff replaces their triggers/RLS.
 
-SQLite stores INTEGER through an exact 64-bit binding; PostgreSQL stores BIGINT through Prisma BigInt handling; IndexedDB stores validated integer strings. Driver coercion to JS number is forbidden and must be tested with values above `Number.MAX_SAFE_INTEGER`. Report sums may require wider accumulators and explicit bounds. Exact rational/decimal quantities, unit prices and tax intermediates will be specified in Phases 6–8; no binary-float multiplication.
+| Tables | Responsibility |
+| --- | --- |
+| user_accounts, cloud_sessions | Salted password hashes and hashed expiring opaque session tokens; trusted authentication boundary |
+| tenants, memberships, company_access | Organization roles/versions/disable state and explicit non-owner company assignments |
+| cloud_books, devices | Scoped snapshot/revision/cursor/epoch and registered user/device/source/generation |
+| cloud_periods, cloud_ledgers | Scoped posting references and valid inclusive date ranges |
+| cloud_journals, cloud_lines | Immutable finalized headers/positive BIGINT lines with composite scope FKs |
+| command_outcomes, cloud_audit, cloud_changes | Immutable command result, accounting audit and gap-free as-of change snapshot/outcome |
+| enrollment_receipts, enrollment_cancellations | Idempotent reviewed import or immutable cancellation tombstone; tenant-locked serialization |
+| security_audit | Append-only membership, device and operator recovery events |
 
-Business date uses a validated calendar date such as `2026-01-15` in company policy, separate from UTC event timestamps. Year/period intervals use documented inclusive/exclusive boundaries. Device timestamps do not prove server authorization or posting order. Company timezone is explicit and independent of this development machine.
+Migrations: 001 foundation; 002 security audit/timestamps/company-access FK; 003 rejected-root replacement links and one accepted replacement per root; 004 enrollment cancellation. Never edit an applied migration; add a forward migration. The engineering cluster records SHA-256 checksums with normalized LF line endings and refuses changed files. Git attributes keep SQL/native source line endings stable across Windows checkouts. Existing pre-checksum engineering entries received a one-time current-file baseline; this is not an independently proven historical hash.
 
-REQ-PERIOD-RANGE-01 now rejects end-before-start in shared domain and memory registration/commit, returning a field-associated error and leaving state unchanged. Inclusive intervals allow a single day. SQLite/PostgreSQL/API/IndexedDB enforcement and their schema constraints remain deferred to the relevant approved phases; no physical schema exists yet. UI feedback/accessibility are separately specified future requirements, not database behavior.
+RLS is enabled and forced on tenant/financial tables. The runtime role is LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE and NOBYPASSRLS, and owns no tables. Startup refuses an owner/bypass role. Transaction-local app.user/app.tenant context and company-access policies prevent pooled context leakage and unauthorized financial rows; no context means no financial rows. API authorization also checks active membership/action permissions.
 
-## Transaction contract and constraints
+A company row lock serializes posting, master versions and cursor allocation. Membership/assignment share locks order authorization against revocation. Deferred PostgreSQL triggers require finalized journals with 2–1,000 balanced lines; NUMERIC sums avoid BIGINT aggregate overflow. Triggers prevent posted header/line edits and outcome/audit/change/enrollment mutation. Period CHECK rejects end-before-start; posting guards check date and current open period/version. The reviewed-import path alone permits valid historical journals in locked periods, while preserving range/balance checks.
 
-One successful posting transaction must commit: receipt/idempotency claim, immutable header/lines, audit event and outbox record (when synchronization is relevant). Error or crash commits none. Storage adapters must check current period lock, same-company references and expected master versions inside the same transaction as the write. Prevalidation in TS does not close concurrent-update races.
+## Local development operations
 
-Cloud/local SQL schemas require composite unique keys and foreign keys containing tenant/company identifiers. IDs alone never establish scope. Posted journals cannot be updated/deleted by normal application roles. Ensure a whole journal is balanced and has at least two lines at the persistence boundary: PostgreSQL deferred constraints/controlled posting function and SQLite guarded transaction/finalization constraints are candidates to prove in adapter implementation. Cross-row balance cannot be promised by an ordinary row CHECK. Do not expose arbitrary SQL or a mutable finalized header to renderers.
+This host's ignored portable PostgreSQL 18.6 bin/lib/share tree is under `.cache/postgresql`. `npm run db:start` initializes or reuses `.cache/cloud/pgdata`, binds 127.0.0.1:55438, uses SCRAM and applies migrations with an engineering administrator. It creates erp_cloud and a separate erp_runtime role. No external service or Windows service is provisioned.
 
-Browser storage has no hostile-user security perimeter. All normal writers must use one application transaction path; indexes, transaction scope and versions prevent accidental duplicates/mixed-company writes. Server validation remains mandatory for synchronization.
+Random development passwords, bootstrap token, signing PEM and API environment live in ignored `.cache/cloud`; do not print, commit or ship them. Their file protection relies on the Windows account and is development configuration, not production secret custody. `npm run db:stop` requests a clean stop. Existing accounts/data are never reset by startup.
 
-Period locks serialize with posting: PostgreSQL locks a period row in both close/post transactions; SQLite serializes relevant writes and verifies lock/version before commit. Browser transactions include period, masters, journal, receipt and outbox stores. Reclassification is versioned to preserve historical report meaning. Read models/balances are rebuildable caches, never independent financial truth.
+After `npm run build`, `npm run api:start` loads the ignored environment file and binds the development API to loopback port 4318. Initialize its first owner once with authenticated bootstrap token and chosen username/password/tenantName at POST /v1/auth/bootstrap. No default account exists. Subsequent owner-created users/assignments use scoped member POST/PUT APIs; membership edits carry expectedVersion/reason. Revoke a device through its scoped owner endpoint. There is no public deployment in this phase.
 
-## Engine-specific decisions and migrations
+Real integration tests create a random `erp_verify_<16 hex>` database, apply the actual migrations, use the real non-owner runtime role/HTTP/native harness, and drop only that checked fixture database. Development and owner stores are never substituted for fixtures.
 
-- SQLite: local disk, `foreign_keys=ON` per connection; proposed WAL and `synchronous=FULL`; bounded busy handling and serialized writes. Read back configuration because unknown PRAGMAs can be ignored. WAL is not a network-share collaboration mechanism. [SQLite PRAGMAs](https://www.sqlite.org/pragma.html)
-- PostgreSQL: Prisma on the server only; raw SQL migrations may implement constraints/RLS that ORM declarations cannot express. Use a non-owner/non-BYPASSRLS runtime role, transaction-local trusted tenant context and FORCE RLS as appropriate; test context under connection pooling. [PostgreSQL RLS](https://www.postgresql.org/docs/18/ddl-rowsecurity.html)
-- IndexedDB: atomic readwrite transactions include every affected store; no network awaits inside them. Expect blocked upgrades, quota errors, multiple tabs and browser-specific durability behavior. [MDN storage limitations](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria)
+## Recovery
 
-Each adapter owns versioned forward migrations and fixtures. Keep command protocol version separate from schema version. Before destructive upgrades, verify a restorable backup; interrupted migration must preserve old or new valid state. Rollback of application binaries must not open an incompatible newer schema. Never auto-delete/reset a failed financial database.
+Local OnlineBackup creates a consistent snapshot; ERPBAK01 encrypts/authenticates it before export. Restore decrypts into a separate candidate, upgrades supported v1 to v2 transactionally, validates integrity, rotates vault generation, pauses cloud profiles and atomically copies it into place. Wrong passphrase/tamper/failure preserves the current store. Temporary plaintext relies on Windows temporary-directory access; secure erasure or power-loss residue removal is not promised.
 
-## Backup and recovery requirements
+After PostgreSQL restoration, keep the API stopped. Preserve backup/evidence and the original signing key. Supply a privileged operator DATABASE_URL and ERP_RECOVERY_REASON, then run:
 
-SQLite snapshots must use its backup API or a verified quiescent strategy, not an isolated copy of a live `.db` with pending WAL. Browser export must include a consistent company snapshot, pending commands, receipts and schema manifest. Cloud backups need independent access and tested point-in-time recovery. Encrypt with maintained authenticated encryption and verify integrity before restore. [SQLite backup API](https://www.sqlite.org/backup.html)
+```sh
+node tools/cloud-restore-epoch.mjs --confirm-service-stopped
+```
 
-Restore into a separate validated location, verify scope/balances/version/checksum, then atomically switch where supported. Preserve original bytes and evidence on failure. Re-register restored devices/generations and reconcile immutable command IDs with server receipts; do not replay with newly generated command IDs. See [sync recovery](offline-sync.md) and [security](security.md). No recovery guarantee has been implemented or tested yet.
+The operator tool rotates company epochs and appends reasoned security events atomically. A disabled system principal identifies this operator action, with the actual database role in event details; it cannot sign in interactively and does not impersonate an owner. The tool neither edits immutable history nor repairs lost postings. Clients must explicitly reconcile snapshots/receipts, and refuse missing accepted history. Production database backup encryption, PITR scheduling, recovery environment, retention and measured RPO/RTO remain Phase 9/10 gates.
+
+## Common model
+
+Tenant/company composite identity is mandatory. Company base currency/exponent/books beginning are immutable under ordinary commands. Financial years/periods are real inclusive business-date intervals. Canonical JSON amounts are integer strings; driver conversion to JS Number is forbidden. Report accumulators may exceed individual persisted signed-64 lines.
+
+Invoice/party/stock/tax entities and FX/quantity precision remain later-phase designs, not existing tables.
+
+## Browser IndexedDB
+
+The origin-scoped `erp-browser-workspace` database uses schema version 2. `meta` holds one vault/credential verifier/generation. `books` holds scoped source snapshots/revisions; `outbox` holds one typed command/delivery record per immutable receipt; `profiles` holds separate canonical snapshots, cursor/epoch, device/account/key/grant bindings, authority revision and leases. `intents`, `enrollments` and `joins` retain stable reviewed requests across interrupted HTTP. `resolutions` retains compensation/replacement links; `events` retains local sync/recovery evidence. Company indexes support scoped queue access. Bearers and plaintext passwords are absent from every store and backup.
+
+An unreleased version-1 engineering schema is upgraded transactionally by adding events/company indexes; this is a tested upgrade fixture, not a claim of a deployed earlier browser product. A blocked upgrade times out visibly after five seconds without deleting data. `versionchange` closes the old connection, locks its runtime and demands reload; opening newer unsupported schemas fails closed.
+
+The host reads a source/revision/authority frame, validates strict wire/domain invariants and independently replays the proposed command through the shared application outside any IDB transaction. A short readwrite transaction rechecks vault generation, source revision, authority revision/expiry and appends book/journal/receipt/audit/outbox atomically. Multi-tab writers retry revision conflicts through the shared CAS adapter. All acknowledgment waits for `transaction.oncomplete`; request success alone never acknowledges a save. Crypto, HTTP and timers stay outside transactions; callbacks may await IDB requests only. Strict durability is requested/read back, with a declared default fallback where the option is unsupported.
+
+Browser backups use a consistent read-only snapshot of all nine stores, authenticated encryption outside the transaction, and an external download. Restore decrypts and checks schemas, unique keys, scopes, source receipt/outbox reconciliation and canonical bindings before a single replacement transaction. It rotates the vault generation, pauses profiles and clears interrupted delivery leases. Wrong keys, tampering, malformed metadata and transaction failures retain the current vault. Read [security](security.md) for the distinct ERPWEB01 format and plaintext storage limitations.
+
+Storage estimates/persistence requests are explicit conveniences, not disk reservations. Quota failures report no successful save; site-data removal or private-window closure can erase the whole vault. There is no reliable first-use-versus-total-eviction distinction after every origin store has been deleted. Users must retain external backups; the UI discloses this. Actual policy-driven eviction and power-loss hardware assurance are not claimed by controlled data-removal/crash fixtures.

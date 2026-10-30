@@ -32,7 +32,8 @@ async function filesWithin(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     // Local research runtime/data and backups are ignored, potentially binary,
     // and outside source validation. Never read their contents as UTF-8 here.
-    if (['.git', 'node_modules', 'dist', 'coverage'].includes(entry.name) || entry.name.endsWith('.tsbuildinfo') ||
+    if (['.git', 'node_modules', '.next', 'dist', 'target', 'gen', 'generated', 'coverage', 'playwright-report', 'test-results'].includes(entry.name) || entry.name.endsWith('.tsbuildinfo') ||
+        (directory === resolve(root,'apps/web/public') && entry.name === 'sw.js') || entry.name === 'next-env.d.ts' ||
         (directory === root && ['local-data', 'backups', '.cache'].includes(entry.name))) continue;
     const path = resolve(directory, entry.name);
     if (entry.isSymbolicLink()) {
@@ -48,6 +49,10 @@ async function filesWithin(directory) {
 
 const files = await filesWithin(root);
 for (const path of files) {
+  if (['.png', '.ico'].includes(extname(path))) {
+    if ((await stat(path)).size === 0) errors.push(`${relative(root, path)}: empty native icon`);
+    continue;
+  }
   const text = await readFile(path, 'utf8');
   if (text.startsWith('\uFEFF')) errors.push(`${relative(root, path)}: unexpected UTF-8 BOM`);
   if (!text.endsWith('\n')) errors.push(`${relative(root, path)}: missing final newline`);
@@ -101,8 +106,8 @@ for (const name of ['domain', 'application']) {
   const external = Object.keys(manifest.dependencies ?? {}).filter((key) => key !== '@erp/domain');
   if (external.length) errors.push(`${name}: external runtime dependencies not admitted`);
 }
-if (files.some((p) => /\.(tsx|rs|sql)$/.test(p)) || files.some((p) => relative(root, p).startsWith('apps'))) {
-  errors.push('UI/native/schema implementation is outside Phase 2');
+if (files.some((p) => /^apps[\\/](?!(desktop|api|web)[\\/])/.test(relative(root, p)))) {
+  errors.push('Only desktop, API and web apps are authorized in Phase 5');
 }
 
 const evidence = json('docs/research/evidence/tally-executable.json');
@@ -139,7 +144,7 @@ const status = contents.get('docs/progress/phase-status.md') ?? '';
 if (!status.includes(`**Phase 1 progress: ${percentage}% (${passed}/10 mandatory criteria).**`)) {
   errors.push('Progress record does not match roadmap');
 }
-for (let phase = 3; phase <= 10; phase++) {
+for (let phase = 6; phase <= 10; phase++) {
   const line = roadmap.split('\n').find((l) => l.startsWith(`| ${phase} —`));
   if (!line?.includes('| 0% | Not started | Not run | Blocked by Phase')) {
     errors.push(`Phase ${phase} must remain unstarted and blocked`);
@@ -153,8 +158,28 @@ if (phase2.length !== 6 || new Set(phase2.map((gate) => gate[1])).size !== 6 ||
     !status.includes(`**Phase 2 progress: ${phase2Percentage}% (${phase2Passed}/6 mandatory criteria).**`)) {
   errors.push('Phase 2 acceptance criteria/progress records disagree');
 }
-if (!roadmap.includes('**Phase 2 only**') || !roadmap.includes('APPROVED AND CLOSED — 2026-10-25') ||
-    !status.includes('Phase 2 closure approval: **not granted**')) {
+const phase3 = [...roadmap.matchAll(/^\| P3-(\d{2}) \|[^\n]+\| (PASS|OPEN)\b[^\n]*\|$/gm)];
+const phase3Passed = phase3.filter((gate) => gate[2] === 'PASS').length;
+const phase3Percentage = Math.floor(100 * phase3Passed / 6);
+if (phase3.length !== 6 || new Set(phase3.map((gate) => gate[1])).size !== 6 ||
+    !roadmap.includes(`| 3 — Offline Desktop Application | ${phase3Percentage}% (${phase3Passed}/6)`) ||
+    !status.includes(`**Phase 3 progress: ${phase3Percentage}% (${phase3Passed}/6 mandatory criteria).**`)) {
+  errors.push('Phase 3 acceptance criteria/progress records disagree');
+}
+const phase4 = [...roadmap.matchAll(/^\| P4-(\d{2}) \|[^\n]+\| (PASS|OPEN)\b[^\n]*\|$/gm)];
+const phase4Passed = phase4.filter((gate) => gate[2] === 'PASS').length;
+const phase4Percentage = Math.floor(100 * phase4Passed / 6);
+if (phase4.length !== 6 || new Set(phase4.map((gate) => gate[1])).size !== 6 ||
+    !roadmap.includes(`| 4 — Cloud Backend and Synchronization | ${phase4Percentage}% (${phase4Passed}/6)`) ||
+    !status.includes(`**Phase 4 progress: ${phase4Percentage}% (${phase4Passed}/6 mandatory criteria).**`)) {
+  errors.push('Phase 4 acceptance criteria/progress records disagree');
+}
+const phase5=[...roadmap.matchAll(/^\| P5-(\d{2}) \|[^\n]+\| (PASS|OPEN)\b[^\n]*\|$/gm)];
+const phase5Passed=phase5.filter(g=>g[2]==='PASS').length;
+const phase5Percentage=Math.floor(100*phase5Passed/6);
+if(phase5.length!==6 || new Set(phase5.map(g=>g[1])).size!==6 || !roadmap.includes(`| 5 — Offline Web Application | ${phase5Percentage}% (${phase5Passed}/6)`) || !status.includes(`**Phase 5 progress: ${phase5Percentage}% (${phase5Passed}/6 mandatory criteria).**`)) errors.push('Phase 5 acceptance criteria/progress records disagree');
+if (!roadmap.includes('**Phase 5 only**') || !roadmap.includes('APPROVED AND CLOSED — 2026-10-26') ||
+    !status.includes('Phase 4 closure approval: **granted**') || !status.includes('Phase 5 closure approval: **not granted**')) {
   errors.push('Explicit prior approval/current phase boundary required');
 }
 
@@ -162,7 +187,8 @@ if (errors.length) {
   for (const error of errors) console.error(`FAIL: ${error}`);
   process.exitCode = 1;
 } else {
-  console.log(`PASS: ${required.length} required foundation files, ${linkCount} local Markdown targets, package/evidence checks, ${files.length} text files checked for whitespace.`);
-  console.log(`PASS: Phase 1 ${percentage}% (${passed}/10), approved/closed; Phase 2 ${phase2Percentage}% (${phase2Passed}/6); Phases 3–10 blocked.`);
+  const textCount = files.filter((p) => !['.png', '.ico'].includes(extname(p))).length;
+  console.log(`PASS: ${required.length} required foundation files, ${linkCount} local Markdown targets, package/evidence checks; ${textCount} text files checked for whitespace and ${files.length - textCount} binary icons checked for size.`);
+  console.log(`PASS: Phases 1–4 approved/closed; Phase 5 ${phase5Percentage}% (${phase5Passed}/6); Phases 6–10 blocked.`);
   console.log('Scope: repository validation only; tests/type/lint/build are separate commands.');
 }

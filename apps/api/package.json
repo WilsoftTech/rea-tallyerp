@@ -1,0 +1,23 @@
+{
+  "name": "@erp/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "start": "node dist/main.js",
+    "generate": "node ../../tools/prisma.mjs generate"
+  },
+  "dependencies": {
+    "@erp/application": "0.0.0",
+    "@erp/contracts": "0.0.0",
+    "@erp/domain": "0.0.0",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "prisma": "7.10.1"
+  }
+}

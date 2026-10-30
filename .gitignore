@@ -1,11 +1,16 @@
 node_modules/
 .cache/
 *.tsbuildinfo
+*.erpbackup
 .next/
+apps/web/public/sw.js
+apps/web/next-env.d.ts
 out/
 dist/
 build/
 target/
+apps/desktop/src-tauri/gen/
+apps/api/src/generated/
 coverage/
 playwright-report/
 test-results/

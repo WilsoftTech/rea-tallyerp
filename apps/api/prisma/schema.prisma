@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+  moduleFormat = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model CloudBook {
+  tenantId String @map("tenant_id")
+  companyId String @map("company_id")
+  revision BigInt
+  cursor BigInt
+  epoch String
+  state String
+  @@id([tenantId, companyId])
+  @@map("cloud_books")
+}
+
+model UserAccount {
+  id String @id
+  username String @unique
+  passwordHash String @map("password_hash")
+  disabled Boolean @default(false)
+  @@map("user_accounts")
+}
+
+model Membership {
+  tenantId String @map("tenant_id")
+  userId String @map("user_id")
+  role String
+  version Int
+  disabled Boolean @default(false)
+  @@id([tenantId, userId])
+  @@map("memberships")
+}
+
+model CloudSession {
+  tokenHash String @id @map("token_hash")
+  userId String @map("user_id")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  @@map("cloud_sessions")
+}

@@ -1,0 +1,37 @@
+[package]
+name = "erp-desktop"
+version = "0.1.0"
+edition = "2021"
+default-run = "erp-desktop"
+
+[features]
+default = ["desktop"]
+desktop = ["dep:tauri", "dep:rfd"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [], optional = true }
+rfd = { version = "0.15", optional = true }
+rusqlite = { version = "0.41", features = ["bundled", "backup"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+argon2 = "0.5.3"
+aes-gcm = "0.10.3"
+getrandom = "0.2.17"
+zeroize = "1"
+tempfile = "3"
+reqwest = { version = "0.13.5", default-features = false, features = ["blocking", "json", "native-tls"] }
+ed25519-dalek = "3.0.0"
+base64 = "0.23.1"
+
+[[bin]]
+name = "storage-harness"
+path = "src/harness.rs"
+
+[profile.release]
+opt-level = "s"
+lto = "thin"
+strip = true

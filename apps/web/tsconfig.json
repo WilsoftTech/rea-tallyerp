@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true, "module": "ESNext", "moduleResolution": "Bundler", "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"], "types": ["node"], "incremental": true,
+    "plugins": [{ "name": "next" }], "resolveJsonModule": true, "esModuleInterop": true,
+    "paths": {
+      "@erp/contracts/reconcile": ["../../packages/contracts/src/reconcile.ts"],
+      "@erp/domain": ["../../packages/domain/src/index.ts"],
+      "@erp/application": ["../../packages/application/src/index.ts"],
+      "@erp/contracts": ["../../packages/contracts/src/index.ts"],
+      "@erp/contracts/codec": ["../../packages/contracts/src/codec.ts"]
+    }
+  },
+  "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "src/worker.ts"]
+}

@@ -3,8 +3,16 @@
   "compilerOptions": {
     "noEmit": true,
     "types": ["node"],
-    "paths": {"@erp/domain": ["./packages/domain/src/index.ts"]}
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "paths": {
+      "@erp/contracts/reconcile": ["./packages/contracts/src/reconcile.ts"],
+      "@erp/contracts/codec": ["./packages/contracts/src/codec.ts"],
+      "@erp/domain": ["./packages/domain/src/index.ts"],
+      "@erp/application": ["./packages/application/src/index.ts"],
+      "@erp/contracts": ["./packages/contracts/src/index.ts"]
+    }
   },
-  "include": ["packages/**/*.ts", "vitest.config.ts"],
+  "include": ["packages/**/*.ts", "apps/desktop/test/**/*.ts", "apps/api/test/**/*.ts", "apps/web/test/**/*.ts", "vitest.config.ts"],
   "exclude": ["**/dist/**"]
 }

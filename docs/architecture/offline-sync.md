@@ -1,68 +1,78 @@
 # Offline operation and synchronization
 
-Status: synchronization remains **proposed, not implemented**. Phase 2 implements exact canonical actor/command payload comparison, scoped receipts and transactional journal/audit contracts with an in-memory reference adapter. No durable local store, outbox, sync worker or server exists. A Phase 2 posting result is a logical in-memory commit, not a durable offline or cloud acknowledgment. Requirements below describe future integration and are not claims about Tally behavior.
+Status: protocol 1 serves native SQLite and Phase 5 browser IndexedDB hosts through the same PostgreSQL authority. Current verification/approval is in [phase status](../progress/phase-status.md). No external deployment occurred.
 
-## Authority and states
+## Authority and durable records
 
-Journal posting state and synchronization state are separate. A draft is editable; a locally posted journal is immutable. In local-only mode it is authoritative for that standalone book and has `not-enrolled` sync state. In synchronized mode it is locally durable but remains `pending` until the server accepts it. UI and exports must never equate local acknowledgment with cloud acceptance.
+Local-only companies remain authoritative standalone books with `not-enrolled` outbox records. Enrollment is explicit, owner-authorized and reviewed: the native host freezes a fixed import intent before HTTP, preserves all original local history and pins the authenticated service's public signing key. Imported actors are historical owner-reviewed evidence, not proof of original cloud authorization.
 
-| Sync state | Meaning | Permitted transition |
-| --- | --- | --- |
-| not-enrolled | Standalone local book, no cloud confirmation expected | Explicit enrollment/reconciliation only |
-| pending | Committed locally with receipt, audit and durable outbox command | sending |
-| sending | Bounded attempt in progress; persisted lease expires after interruption | accepted, pending retry, rejected, conflict |
-| accepted | Matching server receipt/canonical reference persisted locally | Terminal for that command |
-| rejected | Server has durably rejected a command, e.g. no current authority | Terminal command outcome; remediation creates a new linked command |
-| conflict | Expected version/period/dependency is stale and needs resolution | Explicit resolution; original receipt remains immutable |
+Lost enrollment responses retry the same intent and frozen snapshot. Financial work created afterward remains local and queues after acceptance; shared-master edits wait. An existing target company produces COMPANY_ALREADY_EXISTS and requires a deliberate join or another reviewed target. Cancelling a pending import first records a server cancellation tombstone under the same tenant lock as enrollment, refusing cancellation if already accepted. Only a confirmed cancellation releases the local intent; delayed old requests cannot import afterward.
 
-Timeouts, disconnects and unknown HTTP outcomes are retryable/unknown, not proof of rejection. If the server committed and its response was lost, retry the **same command ID and payload**. An accepted command's result remains accepted even if the actor later loses posting rights; retrieving it still requires appropriate authorized access.
+Joining an existing company registers a distinct device/source scope and atomically creates an empty local source book, shared masters and separate accepted mirror. It never replaces another local book or silently replays an old untyped backup.
 
-## Command envelope
+## States and command identity
 
-Proposed fields: protocol version; command ID; device ID/generation; authenticated tenant/company scope; command kind; immutable local journal/document ID; company business date; actor context; expected period/master versions; explicit dependency command IDs; canonical payload and digest. Created-at timestamps support audit only; they do not grant permission or determine ordering.
-
-Canonical serialization defines sorted keys, integer strings, date representation, allowed Unicode/text rules and protocol version before payload hashing. The server computes its own digest and enforces a unique `(tenant, company, commandId)` receipt. Reuse with a different payload returns an idempotency error; no second posting. Authenticate and authorize scope before exposing receipt existence or result. Reject unknown protocol versions explicitly without discarding local work.
-
-## Local atomic sequence
-
-1. Read/validate draft, company, period, ledgers and offline authority using shared application/domain logic.
-2. In one SQLite/IndexedDB transaction, recheck expected versions and lock state; claim command ID; write immutable posting, audit event, receipt and outbox. A local-only store records its receipt but need not enqueue for a nonexistent server.
-3. Acknowledge local success only after transaction commit succeeds. A storage/quota/commit error is not a successful save.
-4. Network coordination happens outside the database transaction, in bounded batches with dependencies sent first. Use exponential backoff/jitter, bounded leases and explicit error classes; reconnect/app-open triggers are sufficient initially.
-
-## Server atomic sequence
-
-1. Authenticate current actor/device, authorize tenant/company and validate bounded protocol payload. Client-reported identity/role is not trusted.
-2. Begin a DB transaction, acquire scope/idempotency protection and load current trusted master/period/permission versions. Receipt concurrency uses a unique key and deterministic conflict handling.
-3. Return an authorized existing same-payload receipt or validate domain invariants against current state. Posting and period-closing share locks; no pre-check-only race.
-4. Commit journal, receipt, audit event and company change sequence atomically. Stable validation rejection/conflict outcomes are retained without a partial journal; transient server failure rolls back for retry.
-5. Return the canonical journal identity, accepted scope and durable change cursor. Persist acknowledgment/mapping locally transactionally; interrupted acknowledgment handling safely retries.
-
-Delivery is at least once; transactional idempotency provides one financial effect per command. Do not describe the network as exactly-once delivery. Retention of receipts must cover supported retry/restore windows; permanent posting receipts or archival uniqueness prevent old duplicates after backup restoration.
-
-## Conflict policy
-
-| Situation | Required behavior |
+| State | Meaning |
 | --- | --- |
-| Period locked after device went offline | Preserve local posting as exception; do not silently move its date. Accountant resolves with an authorized new-period linked correction where appropriate |
-| Role/device revoked while offline | Revalidate at reconnect; reject new acceptance where unauthorized; preserve evidence and access to permitted recovery/export |
-| Master renamed/edited concurrently | Version check, explicit merge or revalidation for mutable master fields; do not silently change accounting nature or referenced snapshot |
-| Same command resent / response lost | Return same authorized durable result; no duplicate journal |
-| Two different commands appear to represent the same business transaction | Command IDs alone cannot detect semantic duplicates; reference uniqueness and review are separate requirements |
-| Reversal depends on unaccepted original | Wait for dependency acceptance or raise explicit conflict; never create orphan cloud reversal |
-| Offline duplicate invoice numbers / stock issues | Provisional per-device numbering and explicit allocation/stock policy; no global uniqueness/availability guarantee without coordination |
-| Posted financial conflict | No last-write-wins; preserve both evidence and acceptance outcomes, resolve through linked commands/reversals |
+| not-enrolled | Standalone work, or an explicitly designated device-only compensation; no cloud acceptance |
+| pending | Atomic local commit awaiting authorized delivery/retry |
+| sending | Persisted delivery lease and attempt count; an interrupted worker can be reclaimed |
+| accepted | Matching durable server receipt was recorded |
+| rejected | Authorized server processing retained a stable business/permission rejection |
+| conflict | Server retained a stale version, period, dependency or identity conflict requiring review |
 
-If a locally posted command is rejected, do not delete or overwrite its journal. Local operational books can include it with clear exception status; the accepted cloud book excludes it. Corrections must identify which book they affect, link original/corrective records, and avoid sending a reversal for a cloud journal that never existed. A resolution may retain a local-only compensating entry and submit a fresh authorized replacement. Every such path requires hand-worked reconciliation tests and accountant approval in Phase 4.
+The immutable source posting state and mutable delivery metadata are separate. Protocol envelopes contain device ID, vault generation, server epoch, typed command, dependency IDs and an optional rejected-root replacement link. Amounts are canonical integer strings. New receipts retain typed commands; old opaque payloads are never guessed into financial commands.
 
-## Incremental pull and recovery
+Server idempotency binds tenant/company/command ID to authenticated user, device, command content, dependencies and replacement link. A changed payload is an explicit conflict. Transport generation/epoch can change during reviewed recovery without changing the financial command identity. Retrieving a prior outcome still requires current authorized company/device access.
 
-Use a server-assigned monotonic per-company change cursor with explicit database generation. Apply each batch and its new cursor atomically; duplicate changes are harmless by stable IDs/version. Handle gaps, expired cursors and changed generations with an authorized consistent snapshot and watermark, then resume. Pagination order is server-defined, not device time. Pull canonical objects without overwriting a separate pending local overlay. Tombstones apply only to deletable drafts/masters; journals are never removed by a sync tombstone.
+The server locks the company and writes outcome, accepted journal/audit, state and next gap-free cursor in one PostgreSQL transaction. Stable domain failures get terminal outcomes; SQL/transient failures roll back everything and remain unknown/retryable. Server authorization and period/chart/draft versions are checked at processing time.
 
-Server receipt + change feed must appear in the same transaction. Protect the feed/snapshot by the same company/role authorization as normal APIs. Dependency ordering, bounded batches, schema negotiation and partial failures are explicit protocol concerns. Binary attachments are out of initial sync scope.
+## Native transport and retry
 
-On backup restore, retain original command IDs/payloads, establish a new device generation, reconcile receipts and accepted IDs, detect cloud/local generation mismatch, and replay only known unacknowledged commands. Server rollback requires its own recovery epoch and client reconciliation; an old cursor must not silently skip changes. Enrollment of local-only books requires balances/identities/dependencies to be reviewed before any bulk acceptance.
+Cloud bearer tokens live only in native memory; no arbitrary fetch/header/SQL RPC exposes them to the renderer. Transport accepts a selected HTTPS origin, loopback HTTP for development, no credentials/path/query in the origin and no redirects. Connect/request timeouts are 5/15 seconds; body and response sizes are bounded.
 
-Browser service workers cache a versioned shell, not unrestricted authenticated API responses. First visit requires connectivity; quota denial/eviction, user data clearing and private modes can lose unsynchronized data. Request persistence and report quota/backup status, but do not promise permanence. Explicit export and desktop backup remain necessary. [MDN storage limits](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria)
+The coordinator uses short native/OS-file/SQLite locks for planning and applying, with network I/O outside every such lock. A persisted company/delivery lease lasts 60 seconds and is refreshed per attempt. Work uploads in local receipt order; dependencies make unsafe ordering explicit. Attempts use bounded exponential backoff up to 64 seconds, with server Retry-After honored up to 300 seconds. Up to 100 commands/batches are processed per invocation; remaining work stays queued. Manual sync and a 30-second visible, unlocked, signed-in foreground check resume work; there is no background service.
 
-Verification is planned in [test strategy](../testing/test-strategy.md): lost response, duplicate command races, reversed ordering, lock/revocation conflicts, interrupted local commit/apply, browser quota and restored generations. None has run yet.
+Timeout, disconnect, HTTP 500 or lost acknowledgment does not mean rejection. Retry the original ID/payload, or discover its accepted receipt through pull. A 401 clears the live session without inventing a financial result; an unexpired grant can still authorize offline work. Known company/device revocation pauses synchronized writes. Sign-out explicitly pauses them; local-only companies remain independent.
+
+## Offline permission policy
+
+The owner selected a maximum **24-hour** grant after online authorization. Ed25519 signatures bind protocol, user, cloud/source scopes, device, vault generation, epoch, permissions, membership version, issuedAt and expiresAt. Native verification checks the pinned key, signature, bindings, duration, expiry and observed clock rollback. A monotonic process clock also detects clock freezing/rollback while the process remains alive.
+
+Expired or invalid grants retain device read and encrypted backup, and deny financial writes. Shared chart/calendar/period edits require the online service, with a durable metadata intent for retry; they are not optimistic offline edits. Existing shared ledger/group classification and referenced period/year definitions cannot be destructively merged. Local-only master editing keeps its prior behavior.
+
+Disconnected revocation and malicious OS clock/file/executable control cannot be eliminated by these grants. No hardware-backed clock or secret custody is claimed. Reconnection rechecks current membership, assignments, device and locks.
+
+## Canonical pull and reports
+
+Pull requests carry epoch, after-cursor and batch limit 1–50 (native uses 20). The service verifies contiguous changes, bounds outcome bytes and returns one snapshot exactly as of the last returned cursor; hasMore resumes later. Native stores canonical snapshot, outcomes and cursor atomically, retaining immutable canonical prefixes and refusing journal-ID business-content collisions. Cursor-ahead, missing changes or generation changes pause for recovery; no cursor is silently discarded.
+
+Operational reporting projects accepted canonical journals plus only this device's pending/sending or accepted-awaiting-download journals. It deduplicates IDs, excludes known exceptions and device-only compensation, flags orphaned/duplicate pending reversals, and uses the shared domain reports. Canonical-only reports label their cursor. Device-history reports retain originals and may omit other devices' work, especially after joining or restoring an older backup. Neither report projection rewrites either history.
+
+Cloud drafts persist in the canonical snapshot. This phase's desktop edits/posts its own source drafts; editing another device's draft is not provided. Conflicting draft versions remain explicit rather than merged.
+
+## Exception resolution
+
+Unknown outcomes must be reconciled before compensation. A durable rejected/conflicting journal can be offset on this device with a reasoned full linked reversal in an open period; it is marked device-only atomically with the resolution link. If an exact full reversal already exists and both commands have durable exceptions, it can be explicitly designated instead of posted twice. Accepted cloud journals use ordinary synchronized reversals.
+
+A failed reversal cannot itself be reversed under the domain model. Its device compensation is a reasoned general contra journal with exactly opposite lines, linked through resolution metadata and excluded from cloud delivery. A reviewed replacement is a new journal with current dates/versions and a rejected-root link. PostgreSQL permits at most one accepted replacement per root. Original failures, compensations, replacement attempts and reasons remain visible/resumable. No financial payload or date is silently changed.
+
+## Backup and recovery
+
+Local encrypted backups preserve source records, outbox, canonical mirror, cursors and public grants; no bearer token is backed up. Restore validates/migrates a separate candidate, rotates vault generation before atomic replacement, clears leases and pauses synchronized posting. Explicit online recovery checks the enrolled account/device, reconciles durable receipt batches and a full authorized snapshot, then issues a grant for the new generation.
+
+Previously accepted source receipts and canonical immutable prefixes must still exist. A server snapshot missing accepted evidence is refused with history conflict; local evidence is preserved for an accountant/operator to reconstruct the authoritative history. An older backup may omit newer accepted work: the canonical mirror recovers it without rewriting the older local source journal.
+
+After restoring PostgreSQL, stop the API, preserve recovery evidence and rotate all company epochs with the privileged [recovery tool](../../tools/cloud-restore-epoch.mjs) before serving again. It does not repair lost postings. Keep the original signing key; key loss/rotation requires a separately reviewed re-enrollment/migration procedure. Production backup schedules, PITR, RPO/RTO and clean-environment restoration remain Phase 9 operational gates.
+
+## Browser coordination
+
+The browser uses the same typed commands, exact engine, server acceptance, report projection and explicit recovery/compensation rules. Requests go only to `/api/accounting` on its own origin. The server-only proxy pins one configured service origin, forwards only explicit bearer/JSON headers, bounds messages/timeouts, blocks redirects/bootstrap, rejects foreign Origin headers and sets no-store. It forwards no cookies. Cloud bearer sessions live in per-tab memory, clear on lock/sign-out/reload and are never persisted, cached or broadcast. Public signed grants are verified with Web Crypto Ed25519 and pinned against the enrolled account/device/source/generation/epoch; maximum offline authorization remains 24 hours.
+
+IndexedDB transactions plan/apply work; HTTP and signature verification run outside them. Per-company and delivery leases last 60 seconds, with 100-command/100-batch invocation limits, ordered receipt delivery, bounded exponential retry plus small browser jitter, and a 300-second Retry-After cap. Foreground sync reuses the existing visible-tab 30-second check. Reload can resume original command IDs, including discovering an acknowledgment through incremental pull before retry. A lease from a crashed tab expires; it is never treated as acceptance.
+
+BroadcastChannel sends only lock/account-change/book-change notifications, never credentials or financial payloads. Explicit lock propagates across tabs. A cloud account change clears other tabs' live cloud sessions conservatively; another unlocked tab may still use its valid stored grant for allowed offline work until expiry/revocation is learned. Restores rotate durable generation so a stale tab cannot write even if a notification is missed. Responses are applied only after rechecking the current tab's cloud session nonce, device, generation and lease; shared UI refreshes also guard selected-company/account context.
+
+Canonical snapshots/outcomes/cursors and compatible masters apply together, preserving immutable accepted prefixes. A known device/epoch/permission rejection pauses affected authority with its durable outcome; a browser permission rejection conservatively requires online renewal. The native adapter preserves a renewed read-only grant when an older queued action is denied, and pauses if a previously granted permission or device is withdrawn. Local-only companies remain independent. Restored or conflicting history requires explicit recovery, not silent cursor reset.
+
+Lost enrollment acknowledgments retry their frozen seed/import identity. The service now pairs the original import receipt with the **current** epoch/cursor/canonical snapshot and renewed grant, so other-device changes or an epoch rotation do not produce an inconsistent old snapshot/fresh grant response. Newer browser source commands queue separately. Browser/Windows backups are host-specific; shared cloud companies, not cross-format restore, provide interoperability.

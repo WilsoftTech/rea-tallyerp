@@ -2,25 +2,43 @@
   "name": "offline-accounting-foundation",
   "version": "0.0.0",
   "private": true,
-  "description": "Offline-first accounting domain; Phase 2 only, product identity undecided.",
+    "description": "Original offline-first accounting desktop, shared engine and authenticated synchronization service.",
   "type": "module",
   "engines": {
     "node": ">=24 <25"
   },
   "packageManager": "npm@11.19.1",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "check:foundation": "node tools/check-foundation.mjs",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint packages --max-warnings 0",
-    "build": "tsc -b packages/domain packages/application",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p packages/workspace && tsc --noEmit -p apps/desktop && tsc --noEmit -p apps/web && tsc --noEmit -p apps/web/tsconfig.worker.json",
+    "lint": "eslint packages apps/desktop/src apps/desktop/test apps/desktop/vite.config.ts apps/api/src apps/api/test apps/api/prisma.config.ts apps/web/src apps/web/test --max-warnings 0",
+    "build": "npm run generate --workspace @erp/api && tsc -b packages/domain packages/application packages/contracts apps/api && npm run build --workspace @erp/desktop && npm run build --workspace @erp/web",
+    "web:dev": "node tools/web.mjs dev",
+    "web:build": "node tools/web.mjs build",
+    "web:start": "node tools/web.mjs start",
+    "api:start": "node --env-file=.cache/cloud/api.env apps/api/dist/main.js",
+    "check:api": "node tools/check-api.mjs",
+    "db:start": "node tools/cloud-db.mjs start",
+    "db:stop": "node tools/cloud-db.mjs stop",
+    "desktop:dev": "node tools/native.mjs dev",
+    "desktop:build": "node tools/native.mjs build",
+    "desktop:debug": "node tools/native.mjs debug",
+    "native:harness": "node tools/native.mjs harness",
+    "native:test": "node tools/native.mjs test",
+    "native:lint": "node tools/native.mjs check",
+    "native:fmt": "node tools/native.mjs fmt",
+    "audit:native": "node tools/audit-native.mjs",
+    "test:desktop": "node tools/desktop-e2e.mjs",
     "check:built": "node tools/check-built.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.1",
     "@types/node": "24.19.2",
     "eslint": "10.13.0",
     "typescript": "6.0.3",

@@ -1,0 +1,468 @@
+{
+  "schemaVersion": 1,
+  "phase": 4,
+  "recordedAt": "2026-10-26T06:09:28.050Z",
+  "timezone": "Africa/Nairobi",
+  "completion": {
+    "percentage": 100,
+    "passedCriteria": 6,
+    "totalCriteria": 6,
+    "implementation": "complete",
+    "verification": "complete",
+    "approval": "APPROVED AND CLOSED — 2026-10-26",
+    "nextPhase": "Phase 5 authorized; Phase 6 and later blocked"
+  },
+  "tests": {
+    "command": "npm.cmd test -- --reporter=json --outputFile=.cache/phase4-vitest.json",
+    "status": "passed",
+    "passed": 146,
+    "failed": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "path": "apps/api/test/cloud.test.ts",
+        "status": "passed",
+        "tests": 28
+      },
+      {
+        "path": "packages/contracts/test/contracts.test.ts",
+        "status": "passed",
+        "tests": 3
+      },
+      {
+        "path": "packages/domain/test/accounting.test.ts",
+        "status": "passed",
+        "tests": 22
+      },
+      {
+        "path": "packages/domain/test/money-calendar.test.ts",
+        "status": "passed",
+        "tests": 57
+      },
+      {
+        "path": "packages/application/test/service.test.ts",
+        "status": "passed",
+        "tests": 24
+      },
+      {
+        "path": "apps/desktop/test/storage.test.ts",
+        "status": "passed",
+        "tests": 12
+      }
+    ],
+    "apiCases": [
+      "native desktop enrolls a reviewed seed, posts offline, uploads exactly once and pulls a separate canonical mirror",
+      "two native devices share accepted reports while preserving separate histories and online-only master edits",
+      "period conflict retains the rejected original, device-only compensation and one accepted replacement",
+      "restored synchronized backup blocks posting until explicit receipt and generation recovery",
+      "a lost native POST acknowledgment is recovered from the change feed without a replacement financial ID",
+      "native role downgrade renews read-only authority and blocks new local financial writes",
+      "server epoch change pauses delivery until reviewed recovery; a missing accepted history cannot be overwritten",
+      "real Windows WebView2 exercises native login, reviewed enrollment, delivery states and accepted reporting",
+      "an enrollment collision stays local and cancellation prevents delayed imports while releasing local master edits",
+      "a rejected reversal is compensated with a reasoned local contra journal and a linked replacement",
+      "an existing rejected full reversal can be designated as device compensation without posting twice",
+      "signed-64-bit maximum amounts persist exactly through native transport, Prisma and PostgreSQL with wider report sums",
+      "real runtime role has RLS without owner/bypass privileges, and absent context is default-deny",
+      "two independent HTTP requests race one command; altered retry cannot duplicate or change it",
+      "unbalanced command retains one stable rejection and no partial posting",
+      "PostgreSQL guards reject inverted ranges, immutable edits and deferred unbalanced persistence",
+      "a persistence failure rolls back journal, outcome and cursor together; retrying the same ID succeeds",
+      "server revalidates period lock, reports conflict, and duplicate accepted receipt survives the lock",
+      "incremental pull is gap-free and snapshots correspond exactly to returned cursors",
+      "signed offline grant is limited to 24 hours, scope/device/generation and verified server signature",
+      "tenant and company assignment stop a real viewer from posting or reading unassigned books",
+      "protocol, scope and invalid financial-period input fail explicitly without a cloud company",
+      "new database role can authenticate through the real service without receiving table ownership",
+      "concurrent shared chart changes retain one winner and stale offline accounting conflicts explicitly",
+      "real concurrent posting versus period closure is serialized with no posting after the lock",
+      "online device revocation pauses the enrolled desktop and cannot be bypassed by recovery",
+      "simultaneous recovery of one device uses a consistent exclusive lock order",
+      "the real stopped-service recovery tool rotates epochs and preserves immutable financial evidence"
+    ],
+    "native": {
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        "tests::native_real_calendar_and_canonical_amount_validation",
+        "tests::signed_offline_grants_reject_tampering_expiry_clock_rollback_and_key_substitution",
+        "tests::interrupted_migration_rolls_back_and_next_open_recovers",
+        "tests::transport_restricts_credentials_to_explicit_secure_origins",
+        "tests::v1_to_v2_migration_is_atomic_and_preserves_existing_vault",
+        "tests::backup_rejects_plaintext_or_unsupported_format_without_replacing_store",
+        "tests::sqlite_settings_constraints_and_immutable_guards_are_active",
+        "tests::password_setup_and_session_timeout_fail_closed"
+      ]
+    }
+  },
+  "checks": [
+    {
+      "name": "typecheck",
+      "command": "npm.cmd run typecheck",
+      "status": "passed"
+    },
+    {
+      "name": "lint",
+      "command": "npm.cmd run lint",
+      "status": "passed"
+    },
+    {
+      "name": "build",
+      "command": "npm.cmd run build; final API emission: npx.cmd tsc -b apps/api",
+      "status": "passed"
+    },
+    {
+      "name": "native-harness",
+      "command": "npm.cmd run native:harness",
+      "status": "passed"
+    },
+    {
+      "name": "native-tests",
+      "command": "npm.cmd run native:test",
+      "status": "passed"
+    },
+    {
+      "name": "native-clippy",
+      "command": "npm.cmd run native:lint",
+      "status": "passed"
+    },
+    {
+      "name": "native-format",
+      "command": "npm.cmd run native:fmt",
+      "status": "passed"
+    },
+    {
+      "name": "windows-debug",
+      "command": "npm.cmd run desktop:debug",
+      "status": "passed"
+    },
+    {
+      "name": "windows-release",
+      "command": "npm.cmd run desktop:build",
+      "status": "passed"
+    },
+    {
+      "name": "built-domain-packages",
+      "command": "npm.cmd run check:built",
+      "status": "passed"
+    },
+    {
+      "name": "emitted-api-startup",
+      "command": "npm.cmd run check:api",
+      "status": "passed"
+    },
+    {
+      "name": "tool-syntax",
+      "command": "node --check for all 11 tools/*.mjs",
+      "status": "passed"
+    },
+    {
+      "name": "npm-advisories",
+      "command": "npm.cmd audit --json --cache .cache/npm",
+      "status": "passed"
+    },
+    {
+      "name": "native-advisories",
+      "command": "npm.cmd run audit:native",
+      "status": "passed"
+    },
+    {
+      "name": "migration-repeatability",
+      "command": "npm.cmd run db:start (forward migrations/checksum verification)",
+      "status": "passed"
+    },
+    {
+      "name": "git-whitespace",
+      "command": "git diff --check",
+      "status": "passed"
+    },
+    {
+      "name": "private-file-exclusion",
+      "command": "git check-ignore for development.json, signing.pem, api.env and generated Prisma client",
+      "status": "passed"
+    },
+    {
+      "name": "foundation-documents-and-phase-gates",
+      "command": "npm.cmd run check:foundation",
+      "status": "passed",
+      "scope": "All current documents/evidence/links checked at 83% before closing the documentation criterion; final 100% state rechecked separately."
+    }
+  ],
+  "webview2": {
+    "passed": true,
+    "platform": "win32",
+    "nativePid": 16924,
+    "startupMs": 2879,
+    "metrics": {
+      "navigationMs": 138,
+      "domElements": 118
+    },
+    "resources": {
+      "scope": "Owned native app and descendant WebView2 processes on this host",
+      "processCount": 7,
+      "privateWorkingSetBytes": 175464448
+    },
+    "checks": [
+      "Keyboard invalid-period submission rejected; focus, inline text, invalid field and screen-reader association verified",
+      "Offline chart/post/report: cash 800 debit, expense 200 debit, equity 1000 credit, trial balance 1000 per side",
+      "Second financial year created and selected without losing company history",
+      "Unsupported native SQL operation rejected",
+      "Forced native process exit/relaunch retained acknowledged postings and required unlock",
+      "Native-only service login and explicit reviewed enrollment accepted in real WebView2",
+      "Real native sync transitions pending to accepted and canonical/device cash reconcile at 750 without renderer network access",
+      "Explicit cloud sign-out clears the service session and restricts synchronized posting while reports remain available"
+    ],
+    "limitations": [
+      "CDP tests debug WebView2, not installer/signing or a screen-reader user trial",
+      "Renderer network routes blocked for synthetic posting; native sync tested only when the isolated cloud fixture is supplied",
+      "Resource/startup samples describe this synthetic debug run, not release-scale performance"
+    ]
+  },
+  "artifacts": {
+    "windowsExecutable": {
+      "path": "apps/desktop/src-tauri/target/release/erp-desktop.exe",
+      "bytes": 9394176,
+      "sha256": "390ba9db71d8e4cc9a22309b091bab44cf1cecbd0e4c3029ef7c87498182da9e",
+      "installer": false,
+      "signed": false
+    },
+    "frontend": {
+      "asset": "index-DJEt3722.js",
+      "bytes": 277229,
+      "gzipBytes": 84564,
+      "gzipMethod": "Node zlib gzipSync default options",
+      "bundledNodeServer": false
+    }
+  },
+  "dependencies": {
+    "npm": {
+      "prisma": "7.10.1",
+      "prismaClient": "7.10.1",
+      "prismaAdapterPg": "7.10.1",
+      "pg": "8.23.1",
+      "zod": "4.6.7"
+    },
+    "native": {
+      "reqwest": "0.13.5 (native-tls / Windows Schannel)",
+      "ed25519Dalek": "3.0.0",
+      "base64": "0.23.1"
+    },
+    "domainRuntimeDependencies": [],
+    "extraUiFramework": false,
+    "backgroundService": false
+  },
+  "advisories": {
+    "npm": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "native": {
+      "checkedAt": "2026-10-25T18:00:36.811Z",
+      "allLockedPackages": 525,
+      "windowsPackages": 292,
+      "windowsFindings": 0,
+      "fullLockFindings": [
+        {
+          "name": "glib",
+          "version": "0.18.5",
+          "id": "GHSA-wrw7-89jp-8q8g",
+          "windows": false
+        },
+        {
+          "name": "glib",
+          "version": "0.18.5",
+          "id": "RUSTSEC-2024-0429",
+          "windows": false
+        },
+        {
+          "name": "proc-macro-error",
+          "version": "1.0.4",
+          "id": "RUSTSEC-2024-0370",
+          "windows": false
+        },
+        {
+          "name": "zbus_names",
+          "version": "4.3.5",
+          "id": "RUSTSEC-2026-0371",
+          "windows": false
+        },
+        {
+          "name": "zvariant",
+          "version": "5.15.1",
+          "id": "RUSTSEC-2026-0370",
+          "windows": false
+        },
+        {
+          "name": "zvariant_derive",
+          "version": "5.15.1",
+          "id": "RUSTSEC-2026-0372",
+          "windows": false
+        }
+      ],
+      "limitations": "Known advisory coverage only; not proof of absence of vulnerabilities or an independent security audit"
+    }
+  },
+  "infrastructure": {
+    "postgresql": {
+      "version": "18.6",
+      "source": "https://get.enterprisedb.com/postgresql/postgresql-18.6-5-windows-x64-binaries.zip",
+      "archiveBytes": 384620317,
+      "archiveSha256": "e2246ba91d22345bc3d017586c09ede52d9df180b1eeb480f050445f1cad84e2",
+      "authenticode": "postgres.exe observed NotSigned; archive hash is local identity, not an independently verified vendor signature",
+      "host": "127.0.0.1",
+      "port": 55438,
+      "cluster": ".cache/cloud/pgdata",
+      "state": "stopped after verification; files preserved",
+      "windowsServiceInstalled": false,
+      "externalHosting": false
+    },
+    "testDatabase": "random erp_verify_<16 hex>, actual migrations/runtime role; checked fixture-only teardown",
+    "api": "temporary HTTP/native integration and emitted startup processes closed; no default account seeded"
+  },
+  "ownerPolicy": {
+    "offlineGrantSeconds": 86400,
+    "expired": "read/encrypted backup retained; synchronized writes require renewal",
+    "localOnly": "independent; no cloud grant expiry"
+  },
+  "reviews": {
+    "accounting": "shared engine; exact int64/wide aggregates; immutable dual histories; balanced source/canonical reconciliation; one accepted replacement per root; SQL rollback/locks/idempotency verified",
+    "security": "current auth/company roles and actual RLS/non-owner context; native memory-only bearer response; signed grants, restricted transport/IPC, restore-generation and audit checks; known limitations below",
+    "reference": "REA read-only availability checked before design; official ERP9 vendor documents attributed; installed synchronization behavior NOT VERIFIED; no new Tally launch/extraction/traffic observation"
+  },
+  "resolvedDuringVerification": [
+    "Initial bundled Rust TLS backend compile failed; Windows native-tls selected and real builds passed.",
+    "Initial Prisma Roaming cache permission failure resolved with a workspace schema-engine helper.",
+    "A PostgreSQL test-hook connection timeout was diagnosed and later full runs passed with bounded connection timeouts.",
+    "Recovery operator audit identity violated its FK; disabled system principal/database-role audit fixed and the real stopped-service tool passed.",
+    "A WebView IPC-interception assertion did not attach to the cached binding; it was replaced with actual shared native-boundary response-field assertions and the normal WebView flow passed.",
+    "Device lock-upgrade and tenant/membership order identified in audit; exclusive recovery lock and common tenant-owner order applied; six-request recovery race passed."
+  ],
+  "limitations": [
+    "Synthetic Windows debug UI/resource samples only, no low-end/release-scale SLA or human screen-reader trial.",
+    "16 MiB book/request, 17 MiB encoded IPC, 18 MiB native response and 128 MiB local backup limits; full as-of snapshots and retention need Phase 9 scale review.",
+    "SQLite plaintext and one local vault owner; Windows account/disk protection required.",
+    "Offline revocation/clock/OS-administrator trust cannot be guaranteed; grants last at most 24 hours.",
+    "Non-Windows lockfile advisories retained; Linux not supported/verified.",
+    "Public hosting/TLS deployment, production key rotation, encrypted PostgreSQL backup/PITR/RPO/RTO drills and signed installation remain later approval gates.",
+    "Missing accepted server history stops recovery for operator/accountant reconstruction; no automatic financial repair or key-loss bypass.",
+    "Cross-device editing of another source draft is not supplied; browser offline support remains Phase 5."
+  ],
+  "git": {
+    "branch": "main",
+    "baseCommit": "c37ff6127546e50b06a9810e98f3400c4a29515b",
+    "committed": false,
+    "pushed": false,
+    "note": "Working tree includes preserved uncommitted Phase 3 work and Phase 4 changes; this is the full current changed-file list, not a fabricated Phase 4-only Git diff.",
+    "changedFiles": [
+      ".gitattributes",
+      ".gitignore",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "README.md",
+      "ROADMAP.md",
+      "apps/api/package.json",
+      "apps/api/prisma.config.ts",
+      "apps/api/prisma/migrations/001_foundation/migration.sql",
+      "apps/api/prisma/migrations/002_security_audit/migration.sql",
+      "apps/api/prisma/migrations/003_resolution_links/migration.sql",
+      "apps/api/prisma/migrations/004_enrollment_cancellation/migration.sql",
+      "apps/api/prisma/schema.prisma",
+      "apps/api/src/admin.ts",
+      "apps/api/src/auth.ts",
+      "apps/api/src/book-store.ts",
+      "apps/api/src/cloud.ts",
+      "apps/api/src/db.ts",
+      "apps/api/src/http.ts",
+      "apps/api/src/main.ts",
+      "apps/api/test/cloud.test.ts",
+      "apps/api/tsconfig.json",
+      "apps/desktop/index.html",
+      "apps/desktop/package.json",
+      "apps/desktop/src-tauri/Cargo.lock",
+      "apps/desktop/src-tauri/Cargo.toml",
+      "apps/desktop/src-tauri/build.rs",
+      "apps/desktop/src-tauri/capabilities/main.json",
+      "apps/desktop/src-tauri/icons/32x32.png",
+      "apps/desktop/src-tauri/icons/icon.ico",
+      "apps/desktop/src-tauri/icons/source.svg",
+      "apps/desktop/src-tauri/migrations/001.sql",
+      "apps/desktop/src-tauri/migrations/002_sync.sql",
+      "apps/desktop/src-tauri/permissions/autogenerated/accounting.toml",
+      "apps/desktop/src-tauri/src/cloud.rs",
+      "apps/desktop/src-tauri/src/cloud_ops.rs",
+      "apps/desktop/src-tauri/src/grants.rs",
+      "apps/desktop/src-tauri/src/harness.rs",
+      "apps/desktop/src-tauri/src/lib.rs",
+      "apps/desktop/src-tauri/src/main.rs",
+      "apps/desktop/src-tauri/src/recovery.rs",
+      "apps/desktop/src-tauri/src/storage.rs",
+      "apps/desktop/src-tauri/src/sync_store.rs",
+      "apps/desktop/src-tauri/src/tests.rs",
+      "apps/desktop/src-tauri/src/transport.rs",
+      "apps/desktop/src-tauri/src/validation.rs",
+      "apps/desktop/src-tauri/tauri.conf.json",
+      "apps/desktop/src/cloud.ts",
+      "apps/desktop/src/env.d.ts",
+      "apps/desktop/src/main.tsx",
+      "apps/desktop/src/native.ts",
+      "apps/desktop/src/store.ts",
+      "apps/desktop/src/style.css",
+      "apps/desktop/src/workspace.tsx",
+      "apps/desktop/test/native-harness.ts",
+      "apps/desktop/test/storage.test.ts",
+      "apps/desktop/tsconfig.json",
+      "apps/desktop/vite.config.ts",
+      "docs/README.md",
+      "docs/accounting/accounting-engine.md",
+      "docs/architecture/database.md",
+      "docs/architecture/decisions.md",
+      "docs/architecture/offline-sync.md",
+      "docs/architecture/overview.md",
+      "docs/architecture/security.md",
+      "docs/progress/phase-status.md",
+      "docs/research/tally-workflows.md",
+      "docs/roadmap.md",
+      "docs/testing/phase3-evidence.json",
+      "docs/testing/phase4-evidence.json",
+      "docs/testing/test-strategy.md",
+      "eslint.config.mjs",
+      "package-lock.json",
+      "package.json",
+      "packages/application/src/commit.ts",
+      "packages/application/src/contracts.ts",
+      "packages/application/src/index.ts",
+      "packages/application/src/memory-store.ts",
+      "packages/application/src/service.ts",
+      "packages/contracts/package.json",
+      "packages/contracts/src/codec.ts",
+      "packages/contracts/src/index.ts",
+      "packages/contracts/test/contracts.test.ts",
+      "packages/contracts/tsconfig.json",
+      "packages/domain/src/reports.ts",
+      "tools/audit-native.mjs",
+      "tools/check-api.mjs",
+      "tools/check-foundation.mjs",
+      "tools/cloud-db.mjs",
+      "tools/cloud-restore-epoch.mjs",
+      "tools/desktop-e2e.mjs",
+      "tools/icon.mjs",
+      "tools/native.mjs",
+      "tools/prisma.mjs",
+      "tsconfig.json",
+      "vitest.config.ts"
+    ]
+  },
+  "clientDate": "2026-10-26",
+  "timestampSource": "Execution-clock UTC; user-facing record date follows latest client context.",
+  "approvalRecord": {
+    "clientDate": "2026-10-26",
+    "ownerInstruction": "close and proceed to next phase",
+    "closesPhase": 4,
+    "authorizesPhase": 5
+  }
+}

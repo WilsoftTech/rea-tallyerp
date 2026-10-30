@@ -1,0 +1,6 @@
+{
+  "identifier": "main",
+  "description": "Only the local main window may use the authenticated accounting boundary.",
+  "windows": ["main"],
+  "permissions": ["allow-accounting"]
+}

@@ -1,0 +1,153 @@
+{
+  "phase": 3,
+  "provenance": "Independent original ERP tests/builds; not Tally runtime observations",
+  "repositoryBase": "c37ff6127546e50b06a9810e98f3400c4a29515b",
+  "scope": "Uncommitted Phase 3 desktop changes",
+  "toolchain": {
+    "node": "24.22.1",
+    "npm": "11.19.1",
+    "rust": "1.99.1 x86_64-pc-windows-msvc",
+    "msvc": "Visual Studio Build Tools 2022 17.14.42",
+    "webview2": "155.0.4283.62"
+  },
+  "verification": {
+    "vitest": {
+      "command": "npm.cmd test",
+      "passed": 115,
+      "failed": 0,
+      "files": 4
+    },
+    "rust": {
+      "command": "npm.cmd run native:test",
+      "passed": 5,
+      "failed": 0
+    },
+    "passedCommands": [
+      "npm.cmd run build",
+      "npm.cmd run typecheck",
+      "npm.cmd run lint",
+      "npm.cmd run check:built",
+      "npm.cmd run native:harness",
+      "npm.cmd run native:lint",
+      "npm.cmd run native:fmt",
+      "npm.cmd run desktop:debug",
+      "npm.cmd run desktop:build",
+      "npm.cmd run test:desktop",
+      "npm.cmd audit --json",
+      "npm.cmd run audit:native",
+      "npm.cmd run check:foundation",
+      "git diff --check"
+    ],
+    "documentationGate": "PASS: check:foundation (19 required files, 72 local targets, 83 text sources, 2 binary icons) and git diff --check"
+  },
+  "recordedAt": "2026-10-25T15:21:52.510Z",
+  "executable": {
+    "path": "apps/desktop/src-tauri/target/release/erp-desktop.exe",
+    "bytes": 7922688,
+    "sha256": "0e95c9d24cea09680651fac5196112ec10cd9709d28a7c87ba40234ae6cf1104"
+  },
+  "lockfiles": {
+    "npm": "f3b035bd3dc80ce8663f96aa1e8f2746895aa41b9f8b5b0d47b1168e7a5e39a1",
+    "cargo": "dd442a45f76a74d1e7edbbc89698f5d3f5c88efbf793096cfa58ae1fe1e17c3d"
+  },
+  "desktop": {
+    "passed": true,
+    "platform": "win32",
+    "nativePid": 5732,
+    "startupMs": 3060,
+    "metrics": {
+      "navigationMs": 163,
+      "domElements": 76
+    },
+    "resources": {
+      "scope": "Owned native app and descendant WebView2 processes on this host",
+      "processCount": 7,
+      "privateWorkingSetBytes": 99184640
+    },
+    "checks": [
+      "Keyboard invalid-period submission rejected; focus, inline text, invalid field and screen-reader association verified",
+      "Offline chart/post/report: cash 800 debit, expense 200 debit, equity 1000 credit, trial balance 1000 per side",
+      "Second financial year created and selected without losing company history",
+      "Unsupported native SQL operation rejected",
+      "Forced native process exit/relaunch retained acknowledged postings and required unlock"
+    ],
+    "limitations": [
+      "CDP tests debug WebView2, not installer/signing or a screen-reader user trial",
+      "Network routes blocked for synthetic posting; no cloud implemented"
+    ]
+  },
+  "posting": {
+    "samples": 20,
+    "linesPerPosting": 20,
+    "finalLines": 400,
+    "p50Ms": 39,
+    "p95Ms": 70,
+    "maximumMs": 73,
+    "scope": "Shared TypeScript service + native SQLite harness, small growing synthetic book; no release-scale claim"
+  },
+  "advisories": {
+    "source": "https://api.osv.dev/v1/querybatch",
+    "checkedAt": "2026-10-25T15:06:17.882Z",
+    "lockedPackages": 500,
+    "windowsGraphPackages": 252,
+    "windowsFindings": [],
+    "nonWindowsFindings": [
+      {
+        "name": "glib",
+        "version": "0.18.5",
+        "id": "GHSA-wrw7-89jp-8q8g",
+        "windows": false
+      },
+      {
+        "name": "glib",
+        "version": "0.18.5",
+        "id": "RUSTSEC-2024-0429",
+        "windows": false
+      },
+      {
+        "name": "proc-macro-error",
+        "version": "1.0.4",
+        "id": "RUSTSEC-2024-0370",
+        "windows": false
+      },
+      {
+        "name": "zbus_names",
+        "version": "4.3.5",
+        "id": "RUSTSEC-2026-0371",
+        "windows": false
+      },
+      {
+        "name": "zvariant",
+        "version": "5.15.1",
+        "id": "RUSTSEC-2026-0370",
+        "windows": false
+      },
+      {
+        "name": "zvariant_derive",
+        "version": "5.15.1",
+        "id": "RUSTSEC-2026-0372",
+        "windows": false
+      }
+    ]
+  },
+  "frontend": [
+    {
+      "name": "index-CNSOLs0u.css",
+      "bytes": 3079
+    },
+    {
+      "name": "index-I6KarHl6.js",
+      "bytes": 262446
+    }
+  ],
+  "limitations": [
+    "One local owner; no cloud sync or browser offline application",
+    "SQLite and temporary snapshots are not encrypted; Windows account/device confidentiality is required",
+    "Backup passphrase and historical vault password cannot be recovered",
+    "16 MiB command / 128 MiB backup limits; full-book snapshots constrain current scale",
+    "Debug startup/memory and 400-line posting sample are not agreed hardware or release-scale budgets",
+    "Six advisory records affect only non-Windows crates; resolve before supporting those targets",
+    "No signed installer, independent security certification or human screen-reader trial"
+  ],
+  "phaseStatus": "100% technically complete; awaiting owner approval; Phase 4 blocked"
+}

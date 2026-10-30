@@ -1,16 +1,16 @@
 # Master implementation roadmap
 
-Updated: 2026-10-25 (Africa/Nairobi). Active authorization: **Phase 2 only**. Owner approval record: **“Implement phase 2”** authorizes Phase 1 closure and Phase 2 implementation after recorded Phase 1 technical completion. No later phase is authorized. This ten-phase plan supersedes the earlier `docs/roadmap.md` schedule. Original software only; no Tally implementation or distinctive UI is reused.
+Updated: 2026-10-26 (Africa/Nairobi, client date). Active authorization: **Phase 5 only**. Approval history: “Implement phase 2” closed Phase 1/authorized Phase 2; **“close phase 2 and implement phase 3”** now explicitly closes Phase 2 and authorizes Phase 3. The later “Implement phase 4” instruction closes Phase 3 and authorizes Phase 4. The later “close and proceed to next phase” instruction explicitly closes Phase 4 and authorizes Phase 5 only. No later phase, commit/push or deployment is authorized. Original software only; no Tally implementation or distinctive UI is reused.
 
 ## Current status
 
 | Phase | Progress | Implementation status | Verification status | Approval status |
 | --- | --- | --- | --- | --- |
 | 1 — Architecture and Foundation | 100% (10/10) | COMPLETE — foundation and baseline documentation | COMPLETE — foundation checks and owner-reported manual baseline | APPROVED AND CLOSED — 2026-10-25 |
-| 2 — Accounting Engine | 100% (6/6) | COMPLETE — shared accounting engine and reference adapter | COMPLETE — 103 tests, type/lint/build, built-package and repository checks | AWAITING USER APPROVAL / not closed |
-| 3 — Offline Desktop Application | 0% | Not started | Not run | Blocked by Phase 2 |
-| 4 — Cloud Backend and Synchronization | 0% | Not started | Not run | Blocked by Phase 3 |
-| 5 — Offline Web Application | 0% | Not started | Not run | Blocked by Phase 4 |
+| 2 — Accounting Engine | 100% (6/6) | COMPLETE — shared accounting engine and reference adapter | COMPLETE — 103 tests, type/lint/build, built-package and repository checks | APPROVED AND CLOSED — 2026-10-25 |
+| 3 — Offline Desktop Application | 100% (6/6) | COMPLETE — desktop, durable storage and recovery | COMPLETE — native/115 Vitest/5 Rust/5 UI, builds, audits and docs | APPROVED AND CLOSED — 2026-10-25 |
+| 4 — Cloud Backend and Synchronization | 100% (6/6) | COMPLETE — scoped backend and native sync | COMPLETE — 146 Vitest/8 Rust/8 UI, real PostgreSQL/native/build/audits/docs | APPROVED AND CLOSED — 2026-10-26 |
+| 5 — Offline Web Application | 0% (0/6) | IN PROGRESS — authorized browser scope | Research/design and baseline reuse review | AUTHORIZED — closure not approved |
 | 6 — Sales and Purchases | 0% | Not started | Not run | Blocked by Phase 5 |
 | 7 — Inventory Management | 0% | Not started | Not run | Blocked by Phase 6 |
 | 8 — Reporting and Compliance | 0% | Not started | Not run | Blocked by Phase 7 |
@@ -42,7 +42,7 @@ Technical exit verdict: **100% COMPLETE — 10/10 mandatory criteria satisfied**
 
 Detailed owner evidence reassessed: all ten criteria remain satisfied. Successful creation using defaults is recorded without asserting individual setting values. The exact inverted-range inputs are now reported; reopened FY/books dates and reporting period remain explicitly unverified. This clarification does not constitute phase approval or authorize Phase 2.
 
-Approval status: **APPROVED AND CLOSED — 2026-10-25** through the owner's later explicit “Implement phase 2” instruction. Earlier test reports did not grant approval; this instruction does. Next permitted action is Phase 2 within its approved scope; Phase 3 remains blocked.
+Approval status: **APPROVED AND CLOSED — 2026-10-25** through the owner's later explicit “Implement phase 2” instruction. Earlier test reports did not grant approval; this instruction does. This historical Phase 1 gate permitted Phase 2. Phase 2 has since been approved/closed and Phase 3 explicitly authorized as recorded above.
 
 Owner-requested **REQ-PERIOD-RANGE-01** was documented in Phase 1 and now has shared-domain/in-memory-boundary validation in Phase 2. Inline field highlighting, keyboard/screen-reader UX and real SQLite/PostgreSQL/IndexedDB enforcement remain scheduled for their approved runtime phases. The reference observation (audible-only rejection, no visible message) stays separate from our implementation/UX requirements.
 
@@ -61,40 +61,54 @@ Executed plan: authorization and REA/target recheck; owner-directed official Tal
 | P2-05 | Ledger and trial balance reconcile to journals/openings/reversals using the shared model | PASS — exact totals, opening/movement/closing balances, duplicate/corrupt input rejection and wide sums |
 | P2-06 | Tests, type/lint/build, research, security/accounting/integration review and docs complete; report delivered | PASS — 103 tests, type/lint/build/built-package and repository checks passed; official-source research, scoped audits and completion report recorded |
 
-Exit verdict: **100% technically complete — 6/6 mandatory criteria**, implementation and verification complete within Phase 2 scope. Phase 2 closure approval is **not granted**. **AWAITING USER APPROVAL — NEXT PHASE BLOCKED**. Next permitted action: explicit owner approval to close Phase 2 and authorize Phase 3; do not start native desktop work automatically. Reference adapter guarantees are in-memory only. Unobserved local ledger/voucher behaviors are **NOT VERIFIED**, recorded separately from implementation defects; the original engine's correctness is established by its independent fixtures/checks, not presumed Tally equivalence.
+Exit verdict: **100% technically complete — 6/6 mandatory criteria**. **APPROVED AND CLOSED — 2026-10-25** by “close phase 2 and implement phase 3”. Next permitted action is Phase 3 within its scope. Reference adapter guarantees remain in-memory only; unobserved Tally behaviors remain NOT VERIFIED. Engine correctness comes from independent fixtures/checks, not presumed reference equivalence.
 
 ## Phase 3 — Offline Desktop Application
 
-Prerequisite: Phase 2 approved. Add React, Tauri 2, a minimal frontend bundler and SQLite only now. Research company setup, offline entry, reports and recovery first.
+Prerequisite satisfied: Phase 2 explicitly approved/closed. Add React/Tauri 2/SQLite only now; reuse the existing Vite tool rather than adding another bundler. Research company setup, offline entry, reports and recovery with supported read-only REA/official docs; mark unavailable UI behavior NOT VERIFIED. Implementation plan: verify native prerequisites; record transaction/security/backup design; build restricted native store plus TS adapter and original UI; test durable commits, isolation, interrupted writes/migrations, encrypted backup/restore; run native/UI/type/lint/build/resource checks and audit/docs. Each of the following six criteria remains mandatory and all-or-nothing.
 
-1. Original accessible desktop shell provides company/year selection and keyboard entry using shared domain logic; date-range validation shows a clear inline error/highlight, blocks invalid apply/save and supports keyboard/screen-reader correction (REQ-PERIOD-RANGE-01). No bundled Node server.
-2. Versioned SQLite migrations, foreign keys, immutable journal constraints, valid financial-period ranges (REQ-PERIOD-RANGE-01), durable local transactions and atomic outbox pass adapter contract tests.
-3. Company/chart creation, posting/reversal and trial balance work offline; reopening preserves acknowledged local records and isolates companies.
-4. Process-kill recovery, disk-full handling and interrupted migration preserve consistency; consistent encrypted backup and restore work on synthetic data.
-5. Local-only mode, offline permission restrictions, credential handling and limited native IPC are implemented with accurate security limitations.
-6. Real Windows build, relevant unit/integration/E2E checks, startup/resource measurements, research, security/accounting review and documentation pass.
+| ID | Mandatory acceptance criterion | Result / evidence |
+| --- | --- | --- |
+| P3-01 | Original accessible shell provides company/year selection and keyboard entry using shared logic; inline/highlighted date errors block invalid apply/save with keyboard/screen-reader association (REQ-PERIOD-RANGE-01); no bundled Node server | PASS — real WebView2 keyboard/ARIA/focus checks and embedded frontend build |
+| P3-02 | Versioned SQLite migrations, FKs, immutable journal constraints, valid period ranges, durable transactions and atomic outbox pass adapter contracts | PASS — Rust/SQLite and service/adapter tests; WAL/FULL/FKs readback, scoped migration and projection/outbox validation |
+| P3-03 | Company/chart creation, posting/reversal and trial balance work offline; reopening preserves acknowledged local records and isolates companies | PASS — native service/process tests and real WebView2 offline journal/report/restart flow |
+| P3-04 | Process-kill, disk-full and interrupted migration preserve consistency; consistent encrypted backup/restore work on synthetic data | PASS — native fault, migration rollback, backup/wrong-key/tamper/restore checks |
+| P3-05 | Local-only mode, offline permission restrictions, credential handling and limited native IPC exist with accurate security limitations | PASS — native password/session/scope tests, sole main-window command capability, no SQL/shell/path IPC; plaintext DB limitation disclosed |
+| P3-06 | Real Windows build, unit/integration/E2E checks, startup/resources, research, security/accounting audit and current docs pass | PASS — real debug/release Windows builds; 115 Vitest, 5 Rust and 5 WebView2 checks; type/lint/format/build, scoped advisory review, resource baseline and document validation; evidence in phase status |
+
+Technical exit verdict: **100% — 6/6 mandatory criteria**, implementation and verification complete. **APPROVED AND CLOSED — 2026-10-25** by “Implement phase 4”. No unresolved Phase 3 release-blocking defect identified in the recorded checks. Current plaintext local-file protection, local-owner-only mode, small-book/debug resource baselines and non-Windows advisory coverage limits remain explicit in [phase status](docs/progress/phase-status.md) and [test evidence](docs/testing/phase3-evidence.json). Signed installer and release-scale assurance are later gates. Next permitted action: Phase 4 implementation within its scope; commit/push and deployment remain unauthorized.
 
 ## Phase 4 — Cloud Backend and Synchronization
 
-Prerequisite: Phase 3 approved. Add Node service, PostgreSQL, Prisma, authentication and protocol validation as required. Research authorized remote/multi-user behavior without inspecting production traffic.
+Prerequisite satisfied: Phase 3 explicitly approved/closed by “Implement phase 4”. Add Node service, PostgreSQL, Prisma, authentication and protocol validation as required. Research authorized remote/multi-user behavior without inspecting production traffic.
 
-1. Authenticated company-scoped API and roles enforce authorization; least-privilege DB role, composite tenant keys and RLS tests block cross-tenant access. Shared validation and PostgreSQL boundaries reject inverted financial periods (REQ-PERIOD-RANGE-01).
-2. Server transactions atomically write command receipt, journal and change cursor; duplicate/reordered/retried commands and altered-payload reuse are handled safely.
-3. Desktop outbox retries safely; pending/accepted/rejected/conflict states and canonical reconciliation preserve immutable local evidence.
-4. Incremental pull, bounded batches, version negotiation, gap recovery and acknowledgments recover from disconnects and lost responses without duplicates.
-5. Period-lock, revocation, stale master, concurrent edit, backup-restore and local-only enrollment conflicts require deliberate resolution; no last-write-wins postings.
-6. Real PostgreSQL concurrency/isolation tests, API/desktop integration, lint/type/build, research, security/accounting review and docs pass; hosting remains a separate approval.
+Implementation plan: recheck read-only REA/official references; admit only required dependencies and isolated PostgreSQL tooling; implement bounded shared wire contracts and authenticated/RLS-protected server transactions; add explicit reviewed enrollment and native signed offline grants/outbox/canonical mirror; verify duplicate/lost-response/concurrency/revocation/conflict/restored-generation and incremental-recovery scenarios; complete real database/native/UI/build/security/accounting/docs gates. No external deployment.
+
+| ID | Mandatory acceptance criterion | Result / evidence |
+| --- | --- | --- |
+| P4-01 | Authenticated company-scoped API and roles enforce authorization; least-privilege DB role, composite tenant keys and RLS tests block cross-tenant access. Shared validation and PostgreSQL boundaries reject inverted financial periods (REQ-PERIOD-RANGE-01). | PASS — authenticated role/company checks, actual non-owner/default-deny RLS and direct viewer-context isolation; API structured range and PostgreSQL CHECK tests |
+| P4-02 | Server transactions atomically write command receipt, journal and change cursor; duplicate/reordered/retried commands and altered-payload reuse are handled safely. | PASS — 12 concurrent duplicate requests, altered-payload refusal, injected SQL/feed rollback, exact BIGINT/wide totals and posting/period/chart races |
+| P4-03 | Desktop outbox retries safely; pending/accepted/rejected/conflict states and canonical reconciliation preserve immutable local evidence. | PASS — real native durable states, lost-ack/process restart, multi-device canonical reports, compensation/replacement and immutable source preservation |
+| P4-04 | Incremental pull, bounded batches, version negotiation, gap recovery and acknowledgments recover from disconnects and lost responses without duplicates. | PASS — bounded cursor batches, protocol rejection, epoch/gap checks, lost acknowledgments and explicit restored-generation/receipt recovery |
+| P4-05 | Period-lock, revocation, stale master, concurrent edit, backup-restore and local-only enrollment conflicts require deliberate resolution; no last-write-wins postings. | PASS — role/device withdrawal, stale chart/period conflicts, six-request device recovery race, encrypted backup restore, missing-history refusal and safe enrollment cancellation |
+| P4-06 | Real PostgreSQL concurrency/isolation tests, API/desktop integration, lint/type/build, research, security/accounting review and docs pass; hosting remains a separate approval. | PASS — 146 Vitest, 8 Rust, 8 WebView checks; actual Windows/API builds, type/lint/native format, runtime smoke, scoped advisory/accounting/security reviews and current repository/docs evidence |
+
+Phase 4 exit verdict: **100% technically complete — 6/6 mandatory criteria**, implementation and verification complete. **APPROVED AND CLOSED — 2026-10-26**, by “close and proceed to next phase”. See [phase report](docs/progress/phase-status.md) and [evidence](docs/testing/phase4-evidence.json). Closure approval is **granted**; Phase 5 is authorized. No commit, push or external deployment occurred. Next permitted action: implement Phase 5 within its approved scope.
 
 ## Phase 5 — Offline Web Application
 
-Prerequisite: Phase 4 approved. Introduce Next.js, IndexedDB adapter and service worker. Browser-specific behavior is our design requirement, not a Tally observation.
+Prerequisite satisfied: Phase 4 was technically complete and explicitly approved/closed. Introduce Next.js, IndexedDB and a service worker; browser behavior is independently designed, not a claimed Tally observation.
 
-1. Next.js shell reuses UI/domain/application contracts and works after initial successful load without server rendering for offline routes.
-2. IndexedDB transactions atomically persist records/outbox; version upgrades and multiple-tab writers preserve invariants and isolation. Web period forms and IndexedDB writes enforce REQ-PERIOD-RANGE-01, including inline/highlighted accessible feedback and blocked invalid submission.
-3. Service worker caching, auth changes, stale clients and pending work survive controlled updates without leaking company responses.
-4. Web posting, sync/retry and conflict resolution pass shared adapter suites and reconcile with desktop/cloud fixtures.
-5. Quota denial, eviction, private mode, blocked upgrades and recovery produce explicit outcomes; persistence requests and backup export/import are verified.
-6. Supported-browser Playwright checks, lint/type/build, research, storage/security/accounting review and docs pass; unsupported modes declared.
+Plan: record authorized closure/research/dependency admission; extract the existing UI and CAS adapter for two hosts; implement strict IndexedDB commits/version upgrades and browser-only credential/grant/backup handling; add the public-shell service worker and fixed-origin API proxy; test actual browser offline/multi-tab/storage/update/conflict/recovery and desktop/cloud reconciliation; complete builds/audits/docs and stop for approval. No Phase 6 work or deployment.
+
+| ID | Mandatory acceptance criterion | Result / evidence |
+| --- | --- | --- |
+| P5-01 | Next.js shell reuses UI/domain/application contracts and works after initial successful load without server rendering for offline routes. | OPEN — not yet verified |
+| P5-02 | IndexedDB transactions atomically persist records/outbox; version upgrades and multiple-tab writers preserve invariants and isolation. Web period forms and IndexedDB writes enforce REQ-PERIOD-RANGE-01, including inline/highlighted accessible feedback and blocked invalid submission. | OPEN — not yet verified |
+| P5-03 | Service worker caching, auth changes, stale clients and pending work survive controlled updates without leaking company responses. | OPEN — not yet verified |
+| P5-04 | Web posting, sync/retry and conflict resolution pass shared adapter suites and reconcile with desktop/cloud fixtures. | OPEN — not yet verified |
+| P5-05 | Quota denial, eviction, private mode, blocked upgrades and recovery produce explicit outcomes; persistence requests and backup export/import are verified. | OPEN — not yet verified |
+| P5-06 | Supported-browser Playwright checks, lint/type/build, research, storage/security/accounting review and docs pass; unsupported modes declared. | OPEN — not yet verified |
 
 ## Phase 6 — Sales and Purchases
 

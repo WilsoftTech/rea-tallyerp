@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-accounting"
+description = "Enables the accounting command without any pre-configured scope."
+commands.allow = ["accounting"]
+
+[[permission]]
+identifier = "deny-accounting"
+description = "Denies the accounting command without any pre-configured scope."
+commands.deny = ["accounting"]

@@ -1,44 +1,66 @@
-# Security model
+# Security implementation and limits
 
-Status: Phase 2 implements permission/scope checks for trusted supplied principals, scoped append-only audit/receipt data and in-memory financial commit guards. Tests cover unauthorized operations, foreign tenant/company data, posted-record edits, duplicate commands and stale versions. This is application policy, **not authentication**: the host must establish identity/membership before constructing Principal. No encryption, sessions, RLS, native capabilities, durable audit retention or production security boundary exists. No security certification is claimed.
+Status: native controls, authenticated service and Phase 5 browser controls exist. Current checks/approval are in [phase status](../progress/phase-status.md); final Phase 5 verification is in progress. This is scoped engineering verification, not certification or the comprehensive Phase 9 audit.
 
-## Trust boundaries and threats
+## Trust boundaries
 
-| Boundary / threat | Planned control | Verification gate |
-| --- | --- | --- |
-| Browser or renderer sends forged scope/role/amounts | Server-authenticated identity, scoped authorization, shared domain validation, bounded schemas; never trust role fields from payload | Phase 4/API and Phase 5 web |
-| Cross-tenant IDs/joins leak records | Tenant/company composite FKs, query scope, authorized exports/change feeds and non-bypass RLS role | Phase 4 real DB tests |
-| WebView script gains OS/SQL access | Packaged original assets, strict CSP, minimal Tauri capabilities, narrow typed native commands; no arbitrary path/shell/SQL IPC | Phase 3 |
-| Lost desktop or copied DB | OS account controls and scoped file permissions; evaluate maintained DB encryption and OS-backed key custody; no plaintext password/token storage | Phase 3 design and tests |
-| User controls local clock/files/browser | Offline trust limitations disclosed; scoped grants, clock rollback detection where possible, mandatory server revalidation | Phase 3/4 |
-| Session theft / web injection | Secure HttpOnly SameSite cookies where applicable, CSRF protection for cookie mutations, output escaping/CSP, session rotation/revocation | Phase 4/5 |
-| Duplicate/replayed/modified financial requests | Scope-bound immutable command receipts, canonical digests, atomic posting, immutable journals and locked periods | Phases 2–4 |
-| Backup theft/tampering / lost keys | Maintained authenticated encryption, separate recovery material, integrity check and restore drill; no home-grown encryption | Phase 3 local; 4 cloud; 9 drills |
-| Sensitive diagnostics/exports | Minimal structured logs, redaction, scoped export permissions and retention; no credentials or full transaction payload logging by default | Every implementation phase |
-| Compromised update/dependency | Pinned lockfiles, provenance/license review, limited dependency surface; signed Windows release/update path | Admission gates; Phase 10 |
+The packaged React renderer has no SQL, shell, arbitrary filesystem, general HTTP or remote-content capability. Its sole main-window accounting IPC admits bounded named operations. CSP allows packaged scripts and IPC only. Native storage fixes the local vault path, derives its tenant/local-owner actor and checks immutable accounting transitions; renderer role assertions do not grant authority.
 
-Tauri explicitly separates the privileged native core from the WebView; permissions must follow that boundary. Its presence alone does not make the application safe. [Tauri security model](https://v2.tauri.app/security/)
+Local authentication uses salted Argon2id, random native-memory tokens, a 15-minute native limit between authorized operations and failed-unlock delay. The renderer independently locks after 15 minutes without keyboard/pointer activity, including while foreground synchronization is running. Each vault has one local owner; its password is not a separate per-person cloud login. Offline authority follows the enrolled account/device grant. SQLite is **not encrypted**: protect the Windows account and disk. An OS administrator can edit files, clocks or the executable. Device authentication does not make a copied plaintext database confidential or tamper-proof.
 
-## Identity and authorization proposal
+Cloud tokens stay in native memory, clear on lock/sign-out/process exit and are never returned to the renderer or included in backups. Login passwords are bounded and cleared from forms after successful use; transient process/page memory is not guaranteed securely erased. No persistent refresh token or OS credential-manager integration is claimed.
 
-Proposed roles: Owner (membership/configuration), Accountant (post/reverse/report; close period only if separately granted), Data Entry (draft; posting only when explicitly permitted), Viewer (read permitted companies/reports). Permissions are action- and company-scoped, not UI visibility checks. Export, backup, restore, period reopen and member administration require explicit rights and audit reasons. System administration does not imply permission to rewrite financial history.
+Native transport validates the selected HTTPS origin, permits HTTP only for loopback development, blocks redirects/proxy inheritance and bounds connection/request/body/response resources. It exposes specific accounting routes, not arbitrary renderer requests. Public service listeners require TLS; the development listener is loopback HTTP. Public hosting, production TLS/proxy deployment and signing remain separate release work.
 
-Local-only users can unlock an encrypted local vault using a vetted password/KDF design; local authentication is separate from any future cloud session. Do not claim that self-hosted auth automatically supplies offline sign-in. A synchronized device must be explicitly enrolled and provisioned with narrowly scoped offline permissions. Provider choice, grant duration, renewal and password recovery are open decisions.
+## Service authentication and roles
 
-Offline authorization cannot guarantee immediate remote revocation or protect against a malicious OS administrator. Proposed expiry behavior: after grant expiry deny new synchronized postings while preserving permitted read/export/recovery; allow draft preparation only if policy permits. Reconnection revalidates permissions and period state. Owner must approve the offline duration, clock handling and local-only recovery policy before Phase 3.
+Node crypto implements salted asynchronous scrypt (N=32768,r=8,p=1,64-byte output); unknown users run a dummy verification path. Password comparison is constant-time. KDF concurrency, login rate, connections, active requests, body size and request time are bounded. Eight-hour opaque random session tokens are stored only as SHA-256 hashes and checked against expiry/current account state on every request. Logout revokes the hashed session.
 
-Server sessions authorize every API call, snapshot, cursor and export. Tenant/company context derives from verified membership, never just route/body identifiers. Cloud runtime DB role is not owner, superuser or BYPASSRLS; tenant context is transaction-local under pooling. Owners typically bypass RLS, so tests must use the actual runtime role. [PostgreSQL row security](https://www.postgresql.org/docs/18/ddl-rowsecurity.html)
+The first owner requires a one-time bootstrap token and serialized empty-account check. No default user/password is seeded. Owner-created accounts and membership/company assignments require scoped authorization and reasons; version checks and last-owner protection prevent accidental lockout. Device revocations and recovery/membership actions are audited. Password reset, MFA, federation and commercial onboarding are not implemented or claimed.
 
-## Secrets, storage and backups
+| Role | Current company permissions |
+| --- | --- |
+| owner | Read/post/reverse/draft, chart/period management and reopen; member/device administration |
+| accountant | Read/post/reverse/draft, chart management and period close; no reopen or membership administration |
+| entry | Read and save drafts |
+| viewer | Read only |
 
-- No DB credentials or long-lived cloud secrets in browser bundles, repositories, fixtures or logs. Browser localStorage is not credential custody. Native tokens belong in an approved OS credential facility, with a documented recovery model.
-- SQLite is not encrypted merely because it is local; IndexedDB is accessible to authorized origin scripts and user/browser tooling. Device theft and XSS are explicit threats. Product UI must state actual protection, not implied encryption.
-- Backups require authenticated encryption with versioned manifests, schema/scope metadata, integrity verification, safe path admission and resource limits. Recovery key loss and passphrase reset cannot be solved by silently weakening encryption. Browser backup encryption must use vetted Web Crypto primitives with reviewed key derivation.
-- Restore validates a separate copy before switching stores. Preserve pending commands, receipt uniqueness and device-generation recovery. Backups live outside the source tree; ignore rules are a guardrail, not a secret scanner.
-- Audit append-only events record actor/device/scope, business action, linked command/journal, reason and trusted server timestamp when available. Local clocks/events are not tamper-proof proof. Retention and access policy require owner approval.
+Non-owners need explicit company assignment. The API builds trusted principals from current authenticated membership; body actor/permission fields retained for historical compatibility never authorize requests.
 
-## Accounting protections and review status
+The PostgreSQL runtime role cannot own tables, act as superuser or bypass RLS. Policies force scoped financial access; transaction-local context is set under pooling. Membership/assignment locks serialize revocation against financial transactions. Composite FKs, range checks, immutable triggers and deferred balancing provide additional persistence defenses. Authentication tables belong to the trusted server boundary and are not exposed through generic CRUD/SQL endpoints.
 
-Posted financial records are immutable at the domain, persistence and server authorization boundaries. Reversal, period reopen and rejection reconciliation preserve original evidence. Server-authoritative acceptance never deletes a rejected local posting. Transactions must protect against concurrent period changes and duplicate commands.
+## Offline authority and integrity
 
-Phase 1 review found no business data, credentials or copied application assets. Certificate metadata was structurally parsed, not cryptographically verified. The owner's synthetic company/date findings remain attributed, with exact retained values and individual defaults unverified. Phase 2 reused the original specification and owner-directed official vendor docs; no native decompilation, security bypass, new launch or production company action occurred. Tests verify the scoped trusted-principal/reference-adapter boundaries, not network authentication, encryption, DB isolation or adversarial OS protection. npm audit reported zero known vulnerabilities at the check; this is not a comprehensive security verdict. Further runtime tests are in [test strategy](../testing/test-strategy.md).
+Owner-approved signed grants last at most **24 hours** and bind user, source/cloud scopes, device, vault generation, server epoch, permissions and membership version. Native Ed25519 verification uses the pinned service key and checks signature/bindings/duration/expiry/clock observations. A monotonic process anchor detects clock freezing while alive. Expiry retains device read/encrypted backup and denies synchronized writes; local-only companies remain independent.
+
+Immediate disconnected revocation and protection from a malicious OS clock/executable are impossible here. Online company/device withdrawal pauses writes; a session-expiry 401 clears live login without fabricating a financial rejection. Explicit sign-out pauses synchronized writes. Restoring a backup rotates generation and requires reviewed online reconciliation; source IDs and accepted evidence are preserved.
+
+Server posting reruns shared accounting, permissions and current period/chart/draft versions. Outcomes/journals/audit/cursor are atomic; duplicate IDs with altered content are rejected. Local posted records remain immutable even when rejected by the cloud. Resolution uses reasoned device compensation and new linked replacement commands, with at most one accepted replacement per rejected root. Unknown responses cannot be treated as failed financial commands.
+
+## Secrets, backup and diagnostics
+
+Database credentials, bootstrap authorization and signing private keys stay in native/server configuration, outside source and browser assets. The ignored local development configuration relies on Windows file protection; production secret/key custody, rotation, residency and retention need release configuration. Signed public grants are nonsecret permissions and can be backed up; bearer tokens cannot.
+
+ERPBAK01 uses authenticated AES-256-GCM, a fresh 16-byte salt/12-byte nonce and Argon2id v19 (19 MiB, two passes, one lane, 32-byte key). A separate passphrase is unrecoverable if lost. Backups include the historical device-password hash. Restore validates a separate candidate before atomic replacement and invalidates old sessions/generations. Plaintext temporary files rely on Windows account access and normal cleanup, with no secure-erasure guarantee.
+
+Server errors expose bounded structured codes/messages, not SQL, credentials or stored payloads. Tests use synthetic stores/accounts. Dependency audit sends only published package identities; it is not a secret scanner or penetration test. Append-only audit/event rows are application/persistence controls, not protection against a privileged database/OS operator.
+
+## Remaining assurance boundaries
+
+Known-advisory checks cover pinned npm and native graphs, distinguishing non-Windows findings from the actual Windows build. Production installation/update signing, independent adversarial testing, password recovery/MFA, hardware-backed local custody, large-scale abuse/concurrency campaigns, production TLS and database backup/PITR drills remain later gates.
+
+Tally research remains lawful read-only metadata/public docs and owner-reported synthetic observations. Unobserved UI behavior stays NOT VERIFIED; our security/accounting tests are independent ERP evidence.
+
+## Browser boundaries and recovery
+
+IndexedDB is **plaintext** origin storage. A device password gates ordinary app operations; it cannot protect financial records from DevTools, malicious extensions, same-origin script compromise, copied browser files or an OS administrator. Do not host unrelated/untrusted applications on this origin. Clearing site data/private-window closure/eviction may erase it; storage persistence permission is not a backup or a guarantee. User-controlled clocks and immediate disconnected revocation remain limitations.
+
+The local verifier derives a nonextractable AES-256-GCM key with native Web Crypto PBKDF2-HMAC-SHA256, 600,000 iterations and random 16-byte salt. It authenticates an encrypted fixed credential-check string with a random 12-byte IV and context AAD; the password/key is not stored. This is a salted credential verifier, **not database encryption**. Setup/backup passphrases are 12–1,024 characters. Unlock permits one KDF at a time plus a two-second failure delay; hostile same-origin code can bypass UI throttling and read plaintext records, so no offline attack-proof claim is made. KDF choice uses the [OWASP PBKDF2 guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html); this is not compliance certification.
+
+The browser backup format is **ERPWEB01**, distinct from native ERPBAK01: a 40-byte authenticated header contains magic, fixed KDF count, fresh 16-byte salt and 12-byte IV; AES-256-GCM adds a 16-byte tag. The same native Web Crypto KDF derives the backup key from a separate passphrase; input/output is bounded at 128 MiB. Credentials and public grants are backed up, cloud bearer tokens are not. Decryption/schema/financial/metadata validation precedes atomic IDB replacement; then generation rotation, session invalidation and cloud recovery restrictions apply. Downloads acknowledge initiation, not guaranteed OS-file persistence; the user must confirm the external file exists. Forgotten backup passphrases cannot be recovered.
+
+The public shell has no account/company state in SSR/RSC or Cache Storage. The worker has an explicit build allowlist because the [Cache API does not itself honor HTTP cache headers](https://developer.mozilla.org/en-US/docs/Web/API/Cache). Only exact same-origin GET shell/static paths are served from it; API paths, mutations, RSC requests and arbitrary URLs bypass it. Worker installation failure deletes only its candidate cache. Updates wait for all old tabs to close, preserving IDB records; schema changes close stale clients without deleting the database.
+
+The Next server's fixed-origin proxy receives only explicit bearer/JSON requests, never forwards cookies, blocks redirects/bootstrap, enforces bounded route parts/body/response/time, rejects foreign Origin headers and marks responses no-store. Database credentials and signing private keys never enter client assets. No cookie authentication or CSRF token library is needed for this explicit-bearer design; server authentication/authorization remains authoritative. CSP limits scripts/network/workers to self, disallows framing/objects/base URLs, and React escapes text. Static Next bootstrap currently requires inline scripts/styles; this CSP is not a nonce-based strict-XSS policy. No arbitrary HTML rendering exists, and a future nonce redesign must preserve offline public-shell behavior.
+
+Supported modes are current verified Windows Chrome/Edge/Firefox on HTTPS or loopback, with IndexedDB, Web Crypto and service workers. Unsupported crypto/storage contexts fail visibly; an unavailable Ed25519 implementation denies synchronized posting while retaining read/backup. Safari/mobile and human assistive-technology trials are not claimed. Actual end-to-end browser/source/proxy/storage/update checks belong to Phase 5 evidence, separate from reference Tally observations and later independent adversarial review.
