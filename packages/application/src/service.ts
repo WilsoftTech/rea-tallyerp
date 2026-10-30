@@ -1,14 +1,26 @@
-import { AccountingError, businessDate, contains, defineBook, ensure, freeze, identifier,
-  postJournal, reverseJournal, sameScope, timestamp, validateLines, version } from '@erp/domain';
-import type { BookConfig, DraftVoucher, FinancialPeriod, JournalEntry } from '@erp/domain';
-import type { BookState, BookStore, CalendarCommand, ChartCommand, CommandResult, FinancialCommand, LockCommand,
-  Permission, PostCommand, PostDraftCommand, Principal, ReverseCommand, SaveDraftCommand } from './contracts.js';
+import { AccountingError, allocateDocument, businessDate, contains, controlLedgers, defineBook, defineParty, ensure, freeze, identifier,
+  postDocument, postJournal, reverseJournal, sameScope, timestamp, validateLines, version, voidDocument } from '@erp/domain';
+import type { Allocation, BookConfig, DraftVoucher, FinancialPeriod, JournalEntry, LineInput, Party, TradeDocument, TradeState } from '@erp/domain';
+import type { AllocateCommand, BookState, BookStore, CalendarCommand, ChartCommand, CommandResult, FinancialCommand, LockCommand,
+  Permission, PostCommand, PostDocumentCommand, PostDraftCommand, Principal, ReverseCommand, SaveDraftCommand, SavePartyCommand,
+  VoidDocumentCommand } from './contracts.js';
 import { canonical } from './data.js';
 
 function authorize(context: Principal, permission: Permission): void {
   identifier(context.actorId, 'actorId'); identifier(context.tenantId, 'tenantId'); identifier(context.companyId, 'companyId');
   ensure(Array.isArray(context.permissions) && context.permissions.every((grant) => ['read', 'post', 'reverse', 'draft', 'manage-chart', 'manage-periods', 'reopen-period'].includes(grant)), 'INVALID_PRINCIPAL', 'Host principal requires an explicit supported permission list.');
   ensure(context.permissions.includes(permission), 'FORBIDDEN', 'Actor is not authorized for this operation.');
+}
+/** Legacy books have no trade collections; they read as empty and are created on the first trade write. */
+export function tradeOf(book: BookState): TradeState {
+  return { parties: book.parties ?? [], documents: book.documents ?? [], allocations: book.allocations ?? [] };
+}
+function writeTrade(book: BookState, state: TradeState): void {
+  book.parties = [...state.parties]; book.documents = [...state.documents]; book.allocations = [...state.allocations];
+}
+function unreserved(book: BookState, lines: readonly LineInput[]): void {
+  const reserved = controlLedgers(tradeOf(book));
+  ensure(lines.every((line) => !reserved.has(line.ledgerId)), 'CONTROL_LEDGER_RESERVED', 'Party control ledgers accept postings only from sales/purchase documents.', 'ledgerId');
 }
 function append(book: BookState, entry: JournalEntry): JournalEntry {
   ensure(!book.entries.some((row) => row.id === entry.id), 'DUPLICATE_JOURNAL', 'Journal ID already exists.');
@@ -40,7 +52,7 @@ export class AccountingService {
       const result = apply(book, command, actor, at);
       book.receipts.push(freeze({ tenantId: actor.tenantId, companyId: actor.companyId, commandId: command.commandId, payload, result, command }));
       book.audit.push(freeze({ tenantId: actor.tenantId, companyId: actor.companyId, commandId: command.commandId, actorId: actor.actorId, action: command.kind, at,
-        reason: command.kind === 'period-status' || command.kind === 'extend-calendar' ? command.reason : command.kind === 'reverse' ? command.journal.narration : '' }));
+        reason: command.kind === 'period-status' || command.kind === 'extend-calendar' || command.kind === 'void-document' ? command.reason : command.kind === 'reverse' ? command.journal.narration : '' }));
       return result;
     });
   }
@@ -48,6 +60,7 @@ export class AccountingService {
   post(principal: Principal, command: PostCommand): Promise<JournalEntry> {
     return this.execute(principal, 'post', command, (book, captured, actor, at) => {
       ensure(captured.kind === 'post', 'INVALID_COMMAND', 'Expected post command.');
+      unreserved(book, captured.journal.lines);
       return append(book, postJournal(book.config, captured.journal, actor.actorId, at));
     });
   }
@@ -58,6 +71,7 @@ export class AccountingService {
       const original = book.entries.find((row) => row.id === captured.originalId);
       ensure(original, 'JOURNAL_NOT_FOUND', 'Original journal must belong to this company.');
       ensure(!book.entries.some((row) => row.reverses === original.id), 'ALREADY_REVERSED', 'Original journal already has a full reversal.');
+      ensure(!tradeOf(book).documents.some((row) => row.journalId === original.id), 'DOCUMENT_JOURNAL', 'Void the sales/purchase document instead of reversing its journal.');
       return append(book, reverseJournal(book.config, original, captured.journal, actor.actorId, at));
     });
   }
@@ -72,7 +86,7 @@ export class AccountingService {
       version(draft.expectedPeriodVersion);
       ensure(['general', 'payment', 'receipt', 'transfer', 'opening'].includes(draft.intent), 'INVALID_INTENT', 'Unsupported draft intent.');
       ensure(typeof draft.narration === 'string' && draft.narration.length <= 2000, 'INVALID_NARRATION', 'Draft narration must be bounded text.');
-      validateLines(book.config, draft.lines); // Drafts may be incomplete/unbalanced; no effect on books.
+      validateLines(book.config, draft.lines); unreserved(book, draft.lines); // Drafts may be incomplete/unbalanced; no effect on books.
       const existing = book.drafts.find((row) => row.id === draft.id);
       ensure(!existing || existing.status === 'draft', 'POSTED_DRAFT_IMMUTABLE', 'Posted source vouchers cannot be edited.');
       ensure(existing ? existing.version === captured.expectedDraftVersion : captured.expectedDraftVersion === null, 'VERSION_CONFLICT', 'Draft changed or already exists.');
@@ -89,6 +103,7 @@ export class AccountingService {
       ensure(draft, 'DRAFT_NOT_FOUND', 'Draft must belong to this company.');
       ensure(draft.status === 'draft', 'POSTED_DRAFT_IMMUTABLE', 'Draft already posted.');
       ensure(draft.version === captured.expectedDraftVersion, 'VERSION_CONFLICT', 'Draft changed; refresh before posting.');
+      unreserved(book, draft.lines);
       const result = append(book, postJournal(book.config, { ...draft, id: captured.entryId, expectedPeriodVersion: captured.expectedPeriodVersion }, actor.actorId, at));
       book.drafts = book.drafts.map((row) => row.id === draft.id ? freeze({ ...row, status: 'posted' as const, version: version(row.version + 1) }) : row);
       return result;
@@ -141,6 +156,58 @@ export class AccountingService {
         'INVALID_PERIOD', 'New financial year requires its own open initial period at version one.');
       book.config = defineBook({ ...book.config, years: [...book.config.years, captured.year], periods: [...book.config.periods, captured.period] });
       return book.config;
+    });
+  }
+
+  /** Customer/supplier master; role and control ledger are fixed once documents reference the party. */
+  saveParty(principal: Principal, command: SavePartyCommand): Promise<Party> {
+    return this.execute(principal, 'manage-chart', command, (book, captured) => {
+      ensure(captured.kind === 'save-party', 'INVALID_COMMAND', 'Expected party command.');
+      const state = tradeOf(book); const input = captured.party;
+      const existing = state.parties.find((row) => row.id === input.id);
+      ensure(existing ? existing.version === captured.expectedPartyVersion : captured.expectedPartyVersion === null, 'VERSION_CONFLICT', 'Party changed or already exists.');
+      if (existing && state.documents.some((row) => row.partyId === existing.id)) {
+        ensure(existing.role === input.role && existing.controlLedgerId === input.controlLedgerId, 'REFERENCED_MASTER_IMMUTABLE', 'Cannot change the role or control ledger of a party with documents.', 'controlLedgerId');
+      }
+      const party = defineParty(book.config, { ...input, version: existing ? version(existing.version + 1) : 1 });
+      writeTrade(book, { ...state, parties: [...state.parties.filter((row) => row.id !== party.id), party] });
+      return party;
+    });
+  }
+
+  /** Posts the document, its balanced journal and any immediate allocations atomically. */
+  postDocument(principal: Principal, command: PostDocumentCommand): Promise<TradeDocument> {
+    return this.execute(principal, 'post', command, (book, captured, actor, at) => {
+      ensure(captured.kind === 'post-document', 'INVALID_COMMAND', 'Expected document command.');
+      const state = tradeOf(book);
+      const posted = postDocument(book.config, state, captured.document, actor.actorId, at);
+      append(book, posted.journal);
+      writeTrade(book, { ...state, documents: [...state.documents, posted.document], allocations: [...state.allocations, ...posted.allocations] });
+      return posted.document;
+    });
+  }
+
+  allocate(principal: Principal, command: AllocateCommand): Promise<readonly Allocation[]> {
+    return this.execute(principal, 'post', command, (book, captured) => {
+      ensure(captured.kind === 'allocate', 'INVALID_COMMAND', 'Expected allocation command.');
+      const state = tradeOf(book);
+      const allocations = allocateDocument(state, captured.sourceId, captured.allocations, captured.date);
+      writeTrade(book, { ...state, allocations: [...state.allocations, ...allocations] });
+      return freeze(allocations);
+    });
+  }
+
+  /** Void = reversal journal; the original document and journal remain immutable history. */
+  voidDocument(principal: Principal, command: VoidDocumentCommand): Promise<TradeDocument> {
+    return this.execute(principal, 'reverse', command, (book, captured, actor, at) => {
+      ensure(captured.kind === 'void-document', 'INVALID_COMMAND', 'Expected void command.');
+      ensure(typeof captured.reason === 'string' && captured.reason.trim().length > 0, 'REASON_REQUIRED', 'Voiding requires an audit reason.', 'reason');
+      const state = tradeOf(book);
+      const { document, journal } = voidDocument(book.config, state, book.entries, { tenantId: actor.tenantId, companyId: actor.companyId, documentId: captured.documentId,
+        date: captured.date, periodId: captured.periodId, expectedPeriodVersion: captured.expectedPeriodVersion, reason: captured.reason }, actor.actorId, at);
+      append(book, journal);
+      writeTrade(book, { ...state, documents: state.documents.map((row) => row.id === document.id ? document : row) });
+      return document;
     });
   }
 

@@ -2,6 +2,18 @@
 
 Status: **Phase 2 implemented** in `packages/domain` and `packages/application`, with 103 Vitest cases and emitted-package smoke verification. The owner's official-site research redirection was used before ledger/journal/report design; vendor behavior is not claimed as locally observed. These are original owner-required accounting rules, not copied reference implementation. Phase 3 now adds SQLite persistence and an original local-only desktop/authentication host; see the runtime documents and current verification record. Phase 4 adds server-authoritative execution of the same engine through Prisma/PostgreSQL, native offline delivery and a separate canonical mirror. Verification belongs to the current phase evidence.
 
+## Phase 6 sales and purchases (in progress)
+
+Implemented in the shared domain ([trade.ts](../../packages/domain/src/trade.ts)) and application service; host persistence, wire contracts, native validation, cloud numbering and UI are still to come.
+
+- **Parties**: customer or supplier masters, versioned, with unique names. Each references a general control ledger (asset for customers, liability for suppliers) that serves one role. Role and control ledger are fixed once documents exist. Control ledgers accept postings only from documents (journals, drafts and commit validation all enforce this).
+- **Documents**: sales/purchase invoices, credit notes (customer), debit notes (supplier), receipts (customer, cash/bank) and payments (supplier, cash/bank). Line amount = quantity (up to 4 decimal places) × exact unit price, rounded half away from zero to the minor unit. There is no tax calculation and no tax certification. Each document posts exactly one balanced journal (`<id>:j`) carrying its total to the control ledger, in the same atomic command as its receipt and audit record.
+- **Numbering**: one series per document type (SI, PI, CN, DN, RC, PY), sequential and never reused; voided documents keep their number. The number is a local provisional number; `acceptedNumber` stays null until the authoritative service assigns one (still to be built).
+- **Allocations**: append-only records from a settlement to a bill of the same party, dated on or after both documents. The engine refuses over-allocation per bill and per settlement, as well as duplicate IDs, cross-party links and invoice-to-invoice links. Unallocated amounts are on-account credits, including advances applied later.
+- **Lifecycle**: posted documents and journals never change. A void is a full reversal journal (`<id>:v`) with a reason. Voiding a settlement releases its allocations; a bill with active settlements cannot be voided. A document journal cannot be reversed directly.
+- **Reports**: party balances reconcile to each control ledger at any date (otherwise CONTROL_MISMATCH). Ageing buckets (current, 1–30, 31–60, 61–90, over 90 days past due) plus on-account credits reconcile to party balances.
+- **Compatibility**: the trade collections are optional in `BookState`, so books saved before Phase 6 stay valid and unchanged until their first trade write.
+
 ## Phase 4 accounting integration
 
 New receipts retain typed commands for exact offline delivery; legacy opaque receipt payloads are preserved, never reverse-guessed. External imports validate balanced history, exact reversal relationships, actor/timestamp syntax, matching immutable receipts/audit and scoped chart/drafts. Owner review does not turn historical local actors into authenticated cloud identities.

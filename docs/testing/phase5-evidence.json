@@ -1,0 +1,346 @@
+{
+  "schemaVersion": 1,
+  "phase": 5,
+  "recordedAt": "2026-10-30T16:05:25.028Z",
+  "timezone": "Africa/Nairobi",
+  "clientDate": "2026-10-30",
+  "timestampSource": "Execution-clock UTC; user-facing record date follows latest client context.",
+  "completion": {
+    "percentage": 100,
+    "passedCriteria": 6,
+    "totalCriteria": 6,
+    "implementation": "COMPLETE",
+    "verification": "COMPLETE",
+    "approval": "APPROVED AND CLOSED — 2026-10-30",
+    "nextPhase": "Phase 6 authorized"
+  },
+  "tests": {
+    "command": "node node_modules/vitest/vitest.mjs run (after npm run db:start, native:harness, desktop:debug)",
+    "status": "passed",
+    "passed": 182,
+    "failed": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "file": "apps/api/test/cloud.test.ts",
+        "passed": 29,
+        "failed": 0
+      },
+      {
+        "file": "apps/desktop/test/storage.test.ts",
+        "passed": 12,
+        "failed": 0
+      },
+      {
+        "file": "apps/web/test/browser.test.ts",
+        "passed": 9,
+        "failed": 0
+      },
+      {
+        "file": "apps/web/test/proxy.test.ts",
+        "passed": 3,
+        "failed": 0
+      },
+      {
+        "file": "apps/web/test/shell.test.ts",
+        "passed": 5,
+        "failed": 0
+      },
+      {
+        "file": "apps/web/test/storage-failures.test.ts",
+        "passed": 4,
+        "failed": 0
+      },
+      {
+        "file": "apps/web/test/sync.test.ts",
+        "passed": 11,
+        "failed": 0
+      },
+      {
+        "file": "packages/application/test/replay.test.ts",
+        "passed": 3,
+        "failed": 0
+      },
+      {
+        "file": "packages/application/test/service.test.ts",
+        "passed": 24,
+        "failed": 0
+      },
+      {
+        "file": "packages/contracts/test/contracts.test.ts",
+        "passed": 3,
+        "failed": 0
+      },
+      {
+        "file": "packages/domain/test/accounting.test.ts",
+        "passed": 22,
+        "failed": 0
+      },
+      {
+        "file": "packages/domain/test/money-calendar.test.ts",
+        "passed": 57,
+        "failed": 0
+      }
+    ],
+    "webCases": [
+      {
+        "name": "Chrome: exact postings, duplicate prevention, full reversal, immutable history and cross-tab CAS survive restart",
+        "status": "passed"
+      },
+      {
+        "name": "Chrome: encrypted backup rejects wrong key/tampering/malformed metadata, restores atomically and invalidates other tabs",
+        "status": "passed"
+      },
+      {
+        "name": "Chrome: company isolation and structured invalid period rejection hold at the browser commit boundary",
+        "status": "passed"
+      },
+      {
+        "name": "Firefox: exact postings, duplicate prevention, full reversal, immutable history and cross-tab CAS survive restart",
+        "status": "passed"
+      },
+      {
+        "name": "Firefox: encrypted backup rejects wrong key/tampering/malformed metadata, restores atomically and invalidates other tabs",
+        "status": "passed"
+      },
+      {
+        "name": "Firefox: company isolation and structured invalid period rejection hold at the browser commit boundary",
+        "status": "passed"
+      },
+      {
+        "name": "Edge: exact postings, duplicate prevention, full reversal, immutable history and cross-tab CAS survive restart",
+        "status": "passed"
+      },
+      {
+        "name": "Edge: encrypted backup rejects wrong key/tampering/malformed metadata, restores atomically and invalidates other tabs",
+        "status": "passed"
+      },
+      {
+        "name": "Edge: company isolation and structured invalid period rejection hold at the browser commit boundary",
+        "status": "passed"
+      },
+      {
+        "name": "fixed-origin proxy forwards only explicit bearer, marks responses private/no-store and drops cookies",
+        "status": "passed"
+      },
+      {
+        "name": "proxy rejects foreign origins, bootstrap, injected path segments, malformed bearers and oversized auth before upstream",
+        "status": "passed"
+      },
+      {
+        "name": "service redirects cannot send a credential to another origin",
+        "status": "passed"
+      },
+      {
+        "name": "Chrome: production public shell reopens offline, validates dates accessibly and retains exact local journals",
+        "status": "passed"
+      },
+      {
+        "name": "Firefox: production public shell reopens offline, validates dates accessibly and retains exact local journals",
+        "status": "passed"
+      },
+      {
+        "name": "Edge: production public shell reopens offline, validates dates accessibly and retains exact local journals",
+        "status": "passed"
+      },
+      {
+        "name": "waiting service-worker update preserves unsynchronized work and activates only after all old tabs close",
+        "status": "passed"
+      },
+      {
+        "name": "browser requests persistence explicitly, reports denial, and downloads/restores an actual encrypted external file",
+        "status": "passed"
+      },
+      {
+        "name": "version-one IndexedDB upgrade preserves rows, blocked upgrades time out without reset, and old clients close on version change",
+        "status": "passed"
+      },
+      {
+        "name": "actual Chromium quota exhaustion aborts every write and preserves the acknowledged book/outbox",
+        "status": "passed"
+      },
+      {
+        "name": "controlled site-data loss and closing a private context require an external backup; stale sessions cannot acknowledge writes",
+        "status": "passed"
+      },
+      {
+        "name": "renderer crash aborts an in-flight IndexedDB transaction without losing earlier acknowledged receipts",
+        "status": "passed"
+      },
+      {
+        "name": "browser offline posting and native desktop share canonical results while keeping independent immutable source books",
+        "status": "passed"
+      },
+      {
+        "name": "lost command acknowledgment reconciles after reload without changing command ID or duplicating a journal",
+        "status": "passed"
+      },
+      {
+        "name": "lost enrollment acknowledgment retains its frozen seed while retry returns current epoch, cursor and other-device changes",
+        "status": "passed"
+      },
+      {
+        "name": "cloud period conflict preserves the source journal, allows explicit device compensation and reconciles encrypted restore generation",
+        "status": "passed"
+      },
+      {
+        "name": "service-account change removes live bearer authority and cannot install a delayed response from the previous account",
+        "status": "passed"
+      },
+      {
+        "name": "Firefox: actual Ed25519 grant permits exact offline work and scoped synchronization",
+        "status": "passed"
+      },
+      {
+        "name": "Edge: actual Ed25519 grant permits exact offline work and scoped synchronization",
+        "status": "passed"
+      },
+      {
+        "name": "expired or tampered offline grants deny posting while reports and encrypted backup remain available",
+        "status": "passed"
+      },
+      {
+        "name": "a device revoked after grant renewal is paused atomically with its durable rejection",
+        "status": "passed"
+      },
+      {
+        "name": "a company-scoped viewer can read its canonical mirror but cannot post offline or access another company",
+        "status": "passed"
+      },
+      {
+        "name": "a delayed login cannot replace an explicit sign-out or a newer local session",
+        "status": "passed"
+      }
+    ],
+    "native": {
+      "command": "npm run native:test",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "checks": [
+    {
+      "command": "npm run typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "npm run lint",
+      "result": "passed (max-warnings 0)"
+    },
+    {
+      "command": "npm run build",
+      "result": "passed; Next.js 16.4.3 static shell, public-only worker 27 paths"
+    },
+    {
+      "command": "npm run native:harness",
+      "result": "passed"
+    },
+    {
+      "command": "npm run desktop:debug",
+      "result": "passed on second attempt; first attempt LNK1109 linker temp-file lock (environmental)"
+    },
+    {
+      "command": "npm run native:lint",
+      "result": "passed (Clippy -D warnings)"
+    },
+    {
+      "command": "npm run native:fmt",
+      "result": "passed"
+    },
+    {
+      "command": "npm audit --json",
+      "result": "0 vulnerabilities"
+    },
+    {
+      "command": "npm run audit:native",
+      "result": "1 Windows finding; owner accepted/deferred"
+    },
+    {
+      "command": "npm run check:foundation",
+      "result": "passed"
+    },
+    {
+      "command": "service-worker update test isolated reruns after fix",
+      "result": "5/5 passed; whole shell file 3/3 passed after type-only follow-up"
+    }
+  ],
+  "advisories": {
+    "npm": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "npmDependencies": 379,
+    "native": {
+      "packages": 525,
+      "windowsPackages": 292,
+      "windowsFindings": 1,
+      "ids": [
+        "GHSA-qwgh-2vcv-g2f7",
+        "GHSA-wrw7-89jp-8q8g",
+        "RUSTSEC-2024-0429",
+        "RUSTSEC-2024-0370",
+        "RUSTSEC-2026-0371",
+        "RUSTSEC-2026-0370",
+        "RUSTSEC-2026-0372"
+      ],
+      "accepted": {
+        "id": "GHSA-qwgh-2vcv-g2f7",
+        "crate": "block-buffer 0.10.4",
+        "paths": [
+          "digest 0.10.7 -> blake2 0.10.6 -> argon2 0.5.3 (runtime vault KDF)",
+          "digest 0.10.7 -> sha2 0.10.9 -> tauri-codegen 2.7.4 (build-time)"
+        ],
+        "fixedIn": "0.12.1",
+        "decision": "Owner accepted and deferred to Phase 9 on 2026-10-30; removal requires an argon2 major upgrade affecting vault key derivation. Reachability of the advisory panic path from argon2 is not test-proven."
+      }
+    }
+  },
+  "resolvedDuringVerification": [
+    {
+      "issue": "Service-worker update test reopened a tab immediately after closing old clients, racing worker hand-over (old cache retained or navigation stalled); first full run 181/182, isolated 1/3.",
+      "resolution": "Test now waits, with zero tabs open, for the new worker to report activated with exactly one cache before reopening. Worker source unchanged."
+    }
+  ],
+  "limitations": [
+    "IndexedDB is plaintext best-effort storage; private windows, clearing site data or eviction can erase it; encrypted ERPWEB01 export is the recovery path.",
+    "Supported modes: current Windows Chrome/Edge/Firefox over HTTPS or loopback; Safari, mobile and non-Windows browsers are not verified.",
+    "An update activates only after every old tab closes; reopening immediately can still be served by the previous worker until hand-over completes.",
+    "Offline grants are at most 24 hours and do not defeat a malicious OS clock or provide instant disconnected revocation.",
+    "Accepted native advisory GHSA-qwgh-2vcv-g2f7 remains open for Phase 9.",
+    "No public hosting, TLS deployment, large-dataset performance, human screen-reader trial or signed installer was performed."
+  ],
+  "reviews": {
+    "accounting": "Browser posting uses the shared AccountingService and ClientBookStore CAS adapter used by desktop; exact postings, duplicates, reversals, immutability, period range and company isolation pass in three browsers; cloud reconciliation with native desktop passes.",
+    "security": "Fixed-origin proxy, memory-only bearer, signed Ed25519 grants, public-only Cache Storage (no company content), account-change and delayed-login handling pass. One native advisory accepted/deferred by owner.",
+    "storage": "Strict IndexedDB transactions, v1->v2 upgrade, blocked/newer schema, quota abort, renderer crash, site-data loss and private-context closure produce explicit outcomes.",
+    "reference": "No new Tally observation was needed; browser behavior is independently designed, not a claimed Tally observation."
+  },
+  "git": {
+    "branch": "main",
+    "baseCommit": "c37ff6127546e50b06a9810e98f3400c4a29515b",
+    "committed": "Phase 3-5 working tree committed and pushed as a2afcda at explicit owner request on 2026-10-30",
+    "pushed": true,
+    "note": "Post-a2afcda Phase 5 verification edits are uncommitted.",
+    "changedSinceCommit": [
+      "apps/web/test/shell.test.ts",
+      "docs/progress/phase-status.md",
+      "docs/testing/phase5-evidence.json",
+      "ROADMAP.md",
+      "README.md",
+      "docs/README.md",
+      "docs/testing/test-strategy.md",
+      "docs/architecture/security.md"
+    ]
+  },
+  "approvalRecord": {
+    "clientDate": "2026-10-30",
+    "ownerInstruction": "“proceed to next phase”, then “approved” in response to the Phase 5 completion report",
+    "closesPhase": 5,
+    "authorizesPhase": 6
+  }
+}

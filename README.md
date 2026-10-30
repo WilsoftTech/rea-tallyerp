@@ -1,6 +1,6 @@
 # rea-tallyerp
 
-Original offline-first accounting ERP. Phases 1–4 are approved and closed. Phase 5 implements the offline browser host and is undergoing verification. Approval and evidence are recorded in [phase status](docs/progress/phase-status.md). Phase 6 remains blocked.
+Original offline-first accounting ERP. Phases 1–4 are approved and closed. Phase 5 (offline browser host) is technically complete (6/6) and awaiting owner approval. Approval and evidence are recorded in [phase status](docs/progress/phase-status.md). Phase 6 remains blocked.
 
 See [documentation](docs/README.md) and the [roadmap](ROADMAP.md). Product branding, installation packaging and production deployment remain later work.
 

@@ -107,7 +107,7 @@ for (const name of ['domain', 'application']) {
   if (external.length) errors.push(`${name}: external runtime dependencies not admitted`);
 }
 if (files.some((p) => /^apps[\\/](?!(desktop|api|web)[\\/])/.test(relative(root, p)))) {
-  errors.push('Only desktop, API and web apps are authorized in Phase 5');
+  errors.push('Only desktop, API and web apps are authorized in Phase 6');
 }
 
 const evidence = json('docs/research/evidence/tally-executable.json');
@@ -144,7 +144,7 @@ const status = contents.get('docs/progress/phase-status.md') ?? '';
 if (!status.includes(`**Phase 1 progress: ${percentage}% (${passed}/10 mandatory criteria).**`)) {
   errors.push('Progress record does not match roadmap');
 }
-for (let phase = 6; phase <= 10; phase++) {
+for (let phase = 7; phase <= 10; phase++) {
   const line = roadmap.split('\n').find((l) => l.startsWith(`| ${phase} —`));
   if (!line?.includes('| 0% | Not started | Not run | Blocked by Phase')) {
     errors.push(`Phase ${phase} must remain unstarted and blocked`);
@@ -178,8 +178,12 @@ const phase5=[...roadmap.matchAll(/^\| P5-(\d{2}) \|[^\n]+\| (PASS|OPEN)\b[^\n]*
 const phase5Passed=phase5.filter(g=>g[2]==='PASS').length;
 const phase5Percentage=Math.floor(100*phase5Passed/6);
 if(phase5.length!==6 || new Set(phase5.map(g=>g[1])).size!==6 || !roadmap.includes(`| 5 — Offline Web Application | ${phase5Percentage}% (${phase5Passed}/6)`) || !status.includes(`**Phase 5 progress: ${phase5Percentage}% (${phase5Passed}/6 mandatory criteria).**`)) errors.push('Phase 5 acceptance criteria/progress records disagree');
-if (!roadmap.includes('**Phase 5 only**') || !roadmap.includes('APPROVED AND CLOSED — 2026-10-26') ||
-    !status.includes('Phase 4 closure approval: **granted**') || !status.includes('Phase 5 closure approval: **not granted**')) {
+const phase6=[...roadmap.matchAll(/^\| P6-(\d{2}) \|[^\n]+\| (PASS|OPEN)\b[^\n]*\|$/gm)];
+const phase6Passed=phase6.filter(g=>g[2]==='PASS').length;
+const phase6Percentage=Math.floor(100*phase6Passed/5);
+if(phase6.length!==5 || new Set(phase6.map(g=>g[1])).size!==5 || !roadmap.includes(`| 6 — Sales and Purchases | ${phase6Percentage}% (${phase6Passed}/5)`) || !status.includes(`**Phase 6 progress: ${phase6Percentage}% (${phase6Passed}/5 mandatory criteria).**`)) errors.push('Phase 6 acceptance criteria/progress records disagree');
+if (!roadmap.includes('**Phase 6 only**') || !roadmap.includes('APPROVED AND CLOSED — 2026-10-30') ||
+    !status.includes('Phase 5 closure approval: **granted**') || !status.includes('Phase 6 closure approval: **not granted**')) {
   errors.push('Explicit prior approval/current phase boundary required');
 }
 
@@ -189,6 +193,6 @@ if (errors.length) {
 } else {
   const textCount = files.filter((p) => !['.png', '.ico'].includes(extname(p))).length;
   console.log(`PASS: ${required.length} required foundation files, ${linkCount} local Markdown targets, package/evidence checks; ${textCount} text files checked for whitespace and ${files.length - textCount} binary icons checked for size.`);
-  console.log(`PASS: Phases 1–4 approved/closed; Phase 5 ${phase5Percentage}% (${phase5Passed}/6); Phases 6–10 blocked.`);
+  console.log(`PASS: Phases 1–5 approved/closed; Phase 6 ${phase6Percentage}% (${phase6Passed}/5); Phases 7–10 blocked.`);
   console.log('Scope: repository validation only; tests/type/lint/build are separate commands.');
 }

@@ -1,6 +1,6 @@
 # Master implementation roadmap
 
-Updated: 2026-10-26 (Africa/Nairobi, client date). Active authorization: **Phase 5 only**. Approval history: “Implement phase 2” closed Phase 1/authorized Phase 2; **“close phase 2 and implement phase 3”** now explicitly closes Phase 2 and authorizes Phase 3. The later “Implement phase 4” instruction closes Phase 3 and authorizes Phase 4. The later “close and proceed to next phase” instruction explicitly closes Phase 4 and authorizes Phase 5 only. No later phase, commit/push or deployment is authorized. Original software only; no Tally implementation or distinctive UI is reused.
+Updated: 2026-10-30 (Africa/Nairobi, client date). Active authorization: **Phase 6 only**. Approval history: “Implement phase 2” closed Phase 1/authorized Phase 2; **“close phase 2 and implement phase 3”** now explicitly closes Phase 2 and authorizes Phase 3. The later “Implement phase 4” instruction closes Phase 3 and authorizes Phase 4. The later “close and proceed to next phase” instruction explicitly closes Phase 4 and authorizes Phase 5. The owner's “proceed to next phase” followed by “approved” on 2026-10-30, given in response to the Phase 5 completion report, closes Phase 5 and authorizes Phase 6 only. The owner separately requested commit/push a2afcda; no later phase, further commit/push or deployment is authorized. Original software only; no Tally implementation or distinctive UI is reused.
 
 ## Current status
 
@@ -10,8 +10,8 @@ Updated: 2026-10-26 (Africa/Nairobi, client date). Active authorization: **Phase
 | 2 — Accounting Engine | 100% (6/6) | COMPLETE — shared accounting engine and reference adapter | COMPLETE — 103 tests, type/lint/build, built-package and repository checks | APPROVED AND CLOSED — 2026-10-25 |
 | 3 — Offline Desktop Application | 100% (6/6) | COMPLETE — desktop, durable storage and recovery | COMPLETE — native/115 Vitest/5 Rust/5 UI, builds, audits and docs | APPROVED AND CLOSED — 2026-10-25 |
 | 4 — Cloud Backend and Synchronization | 100% (6/6) | COMPLETE — scoped backend and native sync | COMPLETE — 146 Vitest/8 Rust/8 UI, real PostgreSQL/native/build/audits/docs | APPROVED AND CLOSED — 2026-10-26 |
-| 5 — Offline Web Application | 0% (0/6) | IN PROGRESS — authorized browser scope | Research/design and baseline reuse review | AUTHORIZED — closure not approved |
-| 6 — Sales and Purchases | 0% | Not started | Not run | Blocked by Phase 5 |
+| 5 — Offline Web Application | 100% (6/6) | COMPLETE — Next.js/IndexedDB browser host and sync | COMPLETE — 182 Vitest/8 Rust, three browsers, PostgreSQL/native reconciliation, builds/audits/docs | APPROVED AND CLOSED — 2026-10-30 |
+| 6 — Sales and Purchases | 0% (0/5) | IN PROGRESS — authorized scope | Research/design and reuse review | AUTHORIZED — closure not approved |
 | 7 — Inventory Management | 0% | Not started | Not run | Blocked by Phase 6 |
 | 8 — Reporting and Compliance | 0% | Not started | Not run | Blocked by Phase 7 |
 | 9 — Security, Performance, and Reliability | 0% | Not started | Not run | Blocked by Phase 8 |
@@ -103,22 +103,26 @@ Plan: record authorized closure/research/dependency admission; extract the exist
 
 | ID | Mandatory acceptance criterion | Result / evidence |
 | --- | --- | --- |
-| P5-01 | Next.js shell reuses UI/domain/application contracts and works after initial successful load without server rendering for offline routes. | OPEN — not yet verified |
-| P5-02 | IndexedDB transactions atomically persist records/outbox; version upgrades and multiple-tab writers preserve invariants and isolation. Web period forms and IndexedDB writes enforce REQ-PERIOD-RANGE-01, including inline/highlighted accessible feedback and blocked invalid submission. | OPEN — not yet verified |
-| P5-03 | Service worker caching, auth changes, stale clients and pending work survive controlled updates without leaking company responses. | OPEN — not yet verified |
-| P5-04 | Web posting, sync/retry and conflict resolution pass shared adapter suites and reconcile with desktop/cloud fixtures. | OPEN — not yet verified |
-| P5-05 | Quota denial, eviction, private mode, blocked upgrades and recovery produce explicit outcomes; persistence requests and backup export/import are verified. | OPEN — not yet verified |
-| P5-06 | Supported-browser Playwright checks, lint/type/build, research, storage/security/accounting review and docs pass; unsupported modes declared. | OPEN — not yet verified |
+| P5-01 | Next.js shell reuses UI/domain/application contracts and works after initial successful load without server rendering for offline routes. | PASS — shared workspace UI/CAS adapter, AccountingService and contracts; static `/` shell reopens offline and posts in Chrome/Firefox/Edge (shell.test.ts); [evidence](docs/testing/phase5-evidence.json) |
+| P5-02 | IndexedDB transactions atomically persist records/outbox; version upgrades and multiple-tab writers preserve invariants and isolation. Web period forms and IndexedDB writes enforce REQ-PERIOD-RANGE-01, including inline/highlighted accessible feedback and blocked invalid submission. | PASS — strict IndexedDB commits with outbox, cross-tab CAS/restart, v1→v2/blocked/newer-schema upgrades, company isolation; invalid range shows focused aria-invalid/aria-describedby message and blocks creation; commit boundary rejects inverted periods (browser/shell/storage-failures tests) |
+| P5-03 | Service worker caching, auth changes, stale clients and pending work survive controlled updates without leaking company responses. | PASS — Cache Storage holds public shell only (no company content); waiting update preserves unsynchronized work and activates only after all old tabs close; account change and delayed login cannot install stale authority (shell/sync tests) |
+| P5-04 | Web posting, sync/retry and conflict resolution pass shared adapter suites and reconcile with desktop/cloud fixtures. | PASS — browser posting via shared service/CAS adapter reconciles with native desktop and real PostgreSQL; lost acknowledgments, enrollment retry, period conflict/compensation, grants, revocation and viewer scope pass (sync.test.ts) |
+| P5-05 | Quota denial, eviction, private mode, blocked upgrades and recovery produce explicit outcomes; persistence requests and backup export/import are verified. | PASS — real Chromium quota exhaustion aborts atomically; renderer crash, blocked upgrade, site-data loss and private-context closure give explicit outcomes; persistence request/denial and encrypted ERPWEB01 download/restore verified |
+| P5-06 | Supported-browser Playwright checks, lint/type/build, research, storage/security/accounting review and docs pass; unsupported modes declared. | PASS — 182/182 Vitest, 8/8 Rust, type/lint/build/Clippy/rustfmt/foundation; npm 0 advisories; native GHSA-qwgh-2vcv-g2f7 owner-accepted/deferred to Phase 9; supported/unsupported modes in [security](docs/architecture/security.md); reviews recorded |
+
+Phase 5 exit verdict: **100% technically complete — 6/6 mandatory criteria**, implementation and verification complete, 2026-10-30. **APPROVED AND CLOSED — 2026-10-30** by the owner's “approved” of the completion report (after “proceed to next phase”). See [phase report](docs/progress/phase-status.md) and [evidence](docs/testing/phase5-evidence.json). One native advisory is accepted by the owner and deferred to Phase 9, not resolved. Phase 6 is authorized.
 
 ## Phase 6 — Sales and Purchases
 
-Prerequisite: Phase 5 approved; observe synthetic invoice, receipt, return and allocation workflows before design.
+Prerequisite satisfied: Phase 5 technically complete and explicitly approved/closed. Observe synthetic invoice, receipt, return and allocation workflows before design where supported; unobservable Tally UI behavior is **NOT VERIFIED** and does not alone block independently specified accounting logic.
 
-1. Customer/supplier masters and service invoices validate dates, prices, rounding and company references; invoice lifecycle cannot mutate posted journals.
-2. Sales/purchase invoices generate balanced postings atomically and idempotently with document links and tested numbering rules.
-3. Receipts, payments, credit/debit notes and partial allocations reconcile party balances; over-allocation and duplicates are rejected atomically.
-4. Receivables/payables and aging reconcile to control ledgers; offline documents retain provisional versus accepted numbering/status.
-5. Desktop/web workflows, offline recovery, cloud conflicts, permissions and reconciliations pass all quality gates and docs. Stock integration follows in Phase 7; no tax certification implied.
+| ID | Mandatory acceptance criterion | Result / evidence |
+| --- | --- | --- |
+| P6-01 | Customer/supplier masters and service invoices validate dates, prices, rounding and company references; invoice lifecycle cannot mutate posted journals. | OPEN — not yet verified |
+| P6-02 | Sales/purchase invoices generate balanced postings atomically and idempotently with document links and tested numbering rules. | OPEN — not yet verified |
+| P6-03 | Receipts, payments, credit/debit notes and partial allocations reconcile party balances; over-allocation and duplicates are rejected atomically. | OPEN — not yet verified |
+| P6-04 | Receivables/payables and aging reconcile to control ledgers; offline documents retain provisional versus accepted numbering/status. | OPEN — not yet verified |
+| P6-05 | Desktop/web workflows, offline recovery, cloud conflicts, permissions and reconciliations pass all quality gates and docs. Stock integration follows in Phase 7; no tax certification implied. | OPEN — not yet verified |
 
 ## Phase 7 — Inventory Management
 

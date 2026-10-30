@@ -129,6 +129,8 @@ test('waiting service-worker update preserves unsynchronized work and activates 
     expect(active.active).toBe('activated');
     await f.page.close();
     await other.close();
+    // With no tabs open, observe activation from the worker itself before reopening; an immediate navigation races the hand-over.
+    await expect.poll(async () => { for (const w of f.context.serviceWorkers()) { const state = await w.evaluate(async () => { const r = (self as unknown as { registration: ServiceWorkerRegistration }).registration; return { waiting: Boolean(r.waiting), active: r.active?.state ?? null, caches: await caches.keys() }; }).catch(() => null); if (state && !state.waiting && state.active === 'activated' && state.caches.length === 1) return state.caches[0]; } return null; }, { timeout: 10000 }).toContain('test' + version);
     const reopened = await f.context.newPage();
     await reopened.goto(origin, {timeout:10000});
     await unlock(reopened);

@@ -1,6 +1,6 @@
 # Documentation index
 
-Current state, 2026-10-26 (client date): Phases 1–4 approved/closed. Phase 5 adds the Next.js/IndexedDB browser host, shared React workspace, public-only offline shell and browser synchronization/recovery. Verification is in progress; [phase status](progress/phase-status.md) is the current authority. [Phase 4 evidence](testing/phase4-evidence.json) remains historical. Phase 6 and later modules remain blocked. Missing Tally UI observations stay NOT VERIFIED and distinct from our independent tests.
+Current state, 2026-10-30 (client date): Phases 1–4 approved/closed. Phase 5 adds the Next.js/IndexedDB browser host, shared React workspace, public-only offline shell and browser synchronization/recovery. Implementation and verification are complete (6/6) and awaiting owner approval; [phase status](progress/phase-status.md) is the current authority and [Phase 5 evidence](testing/phase5-evidence.json) records results. [Phase 4 evidence](testing/phase4-evidence.json) remains historical. Phase 6 and later modules remain blocked. Missing Tally UI observations stay NOT VERIFIED and distinct from our independent tests.
 
 | Document | Responsibility |
 | --- | --- |

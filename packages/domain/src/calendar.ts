@@ -24,3 +24,11 @@ export function contains(range: DateRange, date: string): boolean {
   businessDate(date);
   return date >= range.start && date <= range.end;
 }
+
+/** Calendar-day offset in UTC; result is revalidated as a business date. */
+export function addDays(date: string, days: number): string {
+  businessDate(date);
+  ensure(Number.isSafeInteger(days) && Math.abs(days) <= 36500, 'INVALID_DAYS', 'Day offset must be a bounded whole number.');
+  const value = new Date(Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10) + days));
+  return businessDate(value.toISOString().slice(0, 10));
+}
